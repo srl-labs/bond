@@ -32,6 +32,10 @@ func (a *Agent) newGNMITarget() error {
 	return err
 }
 
+// getConfigWithGNMI gets the config from the gNMI server for the appRootPath
+// and stores it in the agent struct.
+// gNMI Get Request returns the config in the json_ietf encoding.
+// The received config is meant to be used by the NDK app to populate its Config and State struct.
 func (a *Agent) getConfigWithGNMI() {
 	a.logger.Info().
 		Str("root-path", a.appRootPath).
@@ -62,9 +66,11 @@ func (a *Agent) getConfigWithGNMI() {
 
 	// log the received config if it is not empty
 	if len(getResp.GetNotification()) != 0 && len(getResp.GetNotification()[0].GetUpdate()) != 0 {
-		a.logger.Info().Msgf("Config received via gNMI:\n%s", getResp.GetNotification()[0].
+		a.Config = getResp.GetNotification()[0].
 			GetUpdate()[0].
 			GetVal().
-			GetJsonIetfVal())
+			GetJsonIetfVal()
+
+		a.logger.Info().Msgf("Config received via gNMI:\n%s", a.Config)
 	}
 }

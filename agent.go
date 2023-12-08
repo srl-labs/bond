@@ -44,6 +44,11 @@ type Agent struct {
 	// configReceivedCh chan receives the value when the full config
 	// is received by the stream client.
 	ConfigReceivedCh chan struct{}
+	// Config holds the application's config as json_ietf encoded string
+	// that is retrieved from the gNMI server once the commit is done.
+	// Applications are expected to read from this buffer to populate
+	// their Config and State struct.
+	Config []byte
 }
 
 // NewAgent creates a new Agent instance.

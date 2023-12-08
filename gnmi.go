@@ -61,8 +61,8 @@ func (a *Agent) getConfigWithGNMI() {
 	a.logger.Debug().Msgf("gNMI Get response: %+v", getResp)
 
 	// log the received config if it is not empty
-	if len(getResp.GetNotification()) == 0 {
-		a.logger.Info().Msgf("Config:\n%s", getResp.GetNotification()[0].
+	if len(getResp.GetNotification()) != 0 {
+		a.logger.Info().Msgf("Config received via gNMI:\n%s", getResp.GetNotification()[0].
 			GetUpdate()[0].
 			GetVal().
 			GetJsonIetfVal())

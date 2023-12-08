@@ -70,8 +70,9 @@ func (a *Agent) addConfigSubscription(ctx context.Context, streamID uint64) {
 	}
 }
 
-// handleConfigNotifications buffers the configuration notifications received
-// from the config notification stream before commit end notification is received.
+// handleConfigNotifications logs configuration notifications received
+// from the config notification stream and signals the ConfigReceivedCh
+// when the full config is received.
 func (a *Agent) handleConfigNotifications(
 	notifStreamResp *ndk.NotificationStreamResponse,
 ) {
@@ -98,6 +99,8 @@ func (a *Agent) handleConfigNotifications(
 			!a.isCommitSeqZero(cfgNotif.GetData().GetJson()) {
 			a.logger.Debug().
 				Msgf("Received commit end notification: %+v", cfgNotif)
+
+			a.getConfigWithGNMI()
 
 			a.ConfigReceivedCh <- struct{}{}
 		}

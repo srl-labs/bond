@@ -4,11 +4,14 @@ set -o errexit
 set -o pipefail
 
 
-GOFUMPT_CMD="docker run --rm -it -e GOFUMPT_SPLIT_LONG_LINES=on -v $(pwd):/work ghcr.io/hellt/gofumpt:0.3.1"
+GOFUMPT_CMD="sudo docker run --rm -it -e GOFUMPT_SPLIT_LONG_LINES=on -v $(pwd):/work ghcr.io/hellt/gofumpt:0.3.1"
 GOFUMPT_FLAGS="-l -w ."
 
-GODOT_CMD="docker run --rm -it -v $(pwd):/work ghcr.io/hellt/godot:1.4.11"
+GODOT_CMD="sudo docker run --rm -it -v $(pwd):/work ghcr.io/hellt/godot:1.4.11"
 GODOT_FLAGS="-w ."
+
+GOLANGCI_CMD="sudo docker run -t --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.50.1 golangci-lint"
+GOLANGCI_FLAGS="run -v ./..."
 
 function gofumpt {
     ${GOFUMPT_CMD} ${GOFUMPT_FLAGS}
@@ -21,6 +24,10 @@ function godot {
 function format {
     gofumpt
     godot
+}
+
+function golangci-lint {
+    ${GOLANGCI_CMD} ${GOLANGCI_FLAGS}
 }
 
 _run_sh_autocomplete() {

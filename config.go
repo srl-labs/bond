@@ -5,11 +5,33 @@ import (
 	"encoding/json"
 
 	"github.com/nokia/srlinux-ndk-go/ndk"
+	"google.golang.org/protobuf/encoding/prototext"
 )
 
 const (
 	commitEndKeyPath = ".commit.end"
 )
+
+// receiveConfigNotifications receives a stream of configuration notifications
+// buffer them in the configuration buffer and populates ConfigState struct of the App
+// once the whole committed config is received.
+func (a *Agent) receiveConfigNotifications(ctx context.Context) {
+	configStream := a.StartConfigNotificationStream(ctx)
+
+	for cfgStreamResp := range configStream {
+		b, err := prototext.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(cfgStreamResp)
+		if err != nil {
+			a.logger.Info().
+				Msgf("Config notification Marshal failed: %+v", err)
+			continue
+		}
+
+		a.logger.Info().
+			Msgf("Received notifications:\n%s", b)
+
+		a.handleConfigNotifications(cfgStreamResp)
+	}
+}
 
 // StartConfigNotificationStream starts a notification stream for Config service notifications.
 func (a *Agent) StartConfigNotificationStream(ctx context.Context) chan *ndk.NotificationStreamResponse {

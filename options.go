@@ -8,7 +8,7 @@ import (
 
 type Option func(*Agent) error
 
-// WithLogger sets the logger for the Agent
+// WithLogger sets the logger for the Agent.
 func WithLogger(logger *zerolog.Logger) Option {
 	return func(a *Agent) error {
 		a.logger = logger
@@ -19,6 +19,15 @@ func WithLogger(logger *zerolog.Logger) Option {
 func WithContext(ctx context.Context) Option {
 	return func(a *Agent) error {
 		a.ctx = ctx
+		return nil
+	}
+}
+
+// WithAppRootPath sets the root XPATH path for the application configuration.
+func WithAppRootPath(path string) Option {
+	return func(a *Agent) error {
+		a.appRootPath = path
+
 		return nil
 	}
 }

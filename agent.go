@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/nokia/srlinux-ndk-go/ndk"
+	"github.com/openconfig/gnmic/pkg/target"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -13,22 +14,27 @@ import (
 )
 
 const (
-	ndkSocket            = "unix:///opt/srlinux/var/run/sr_sdk_service_manager:50053"
-	grpcServerUnixSocket = "unix:///opt/srlinux/var/run/sr_gnmi_server"
-	defaultRetryTimeout  = 5 * time.Second
+	ndkSocket           = "unix:///opt/srlinux/var/run/sr_sdk_service_manager:50053"
+	defaultRetryTimeout = 5 * time.Second
+
+	defaultUsername = "admin"
+	defaultPassword = "NokiaSrl1!"
+
+	agentMetadataKey = "agent_name"
 )
 
 type Agent struct {
 	ctx context.Context
 
-	Name  string
-	AppID uint32
+	Name        string
+	AppID       uint32
+	appRootPath string
 
 	gRPCConn     *grpc.ClientConn
 	logger       *zerolog.Logger
 	retryTimeout time.Duration
 
-	// gNMITarget *target.Target
+	gNMITarget *target.Target
 
 	// NDK Service clients
 	SDKMgrServiceClient       ndk.SdkMgrServiceClient
@@ -54,7 +60,7 @@ func NewAgent(name string, opts ...Option) (*Agent, error) {
 		}
 	}
 
-	a.ctx = metadata.AppendToOutgoingContext(a.ctx, "agent_name", a.Name)
+	a.ctx = metadata.AppendToOutgoingContext(a.ctx, agentMetadataKey, a.Name)
 
 	return a, nil
 }
@@ -77,6 +83,8 @@ func (a *Agent) Start() error {
 	if err != nil {
 		return err
 	}
+
+	a.newGNMITarget()
 
 	go a.receiveConfigNotifications(a.ctx)
 

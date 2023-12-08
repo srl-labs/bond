@@ -16,7 +16,7 @@ const (
 // buffer them in the configuration buffer and populates ConfigState struct of the App
 // once the whole committed config is received.
 func (a *Agent) receiveConfigNotifications(ctx context.Context) {
-	configStream := a.StartConfigNotificationStream(ctx)
+	configStream := a.startConfigNotificationStream(ctx)
 
 	for cfgStreamResp := range configStream {
 		b, err := prototext.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(cfgStreamResp)
@@ -33,8 +33,8 @@ func (a *Agent) receiveConfigNotifications(ctx context.Context) {
 	}
 }
 
-// StartConfigNotificationStream starts a notification stream for Config service notifications.
-func (a *Agent) StartConfigNotificationStream(ctx context.Context) chan *ndk.NotificationStreamResponse {
+// startConfigNotificationStream starts a notification stream for Config service notifications.
+func (a *Agent) startConfigNotificationStream(ctx context.Context) chan *ndk.NotificationStreamResponse {
 	streamID := a.createNotificationStream(ctx)
 
 	a.logger.Info().
@@ -70,8 +70,9 @@ func (a *Agent) addConfigSubscription(ctx context.Context, streamID uint64) {
 	}
 }
 
-// handleConfigNotifications buffers the configuration notifications received
-// from the config notification stream before commit end notification is received.
+// handleConfigNotifications logs configuration notifications received
+// from the config notification stream and signals the ConfigReceivedCh
+// when the full config is received.
 func (a *Agent) handleConfigNotifications(
 	notifStreamResp *ndk.NotificationStreamResponse,
 ) {
@@ -98,6 +99,8 @@ func (a *Agent) handleConfigNotifications(
 			!a.isCommitSeqZero(cfgNotif.GetData().GetJson()) {
 			a.logger.Debug().
 				Msgf("Received commit end notification: %+v", cfgNotif)
+
+			a.getConfigWithGNMI()
 
 			a.ConfigReceivedCh <- struct{}{}
 		}

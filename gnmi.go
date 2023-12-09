@@ -41,6 +41,11 @@ func (a *Agent) getConfigWithGNMI() {
 		Str("root-path", a.appRootPath).
 		Msg("Getting config with gNMI")
 
+	// reset the config as it might contain the previous config
+	// and in case we receive an empty config (when config was deleted),
+	// we want our Config to be nil
+	a.Config = nil
+
 	err := a.gNMITarget.CreateGNMIClient(a.ctx)
 	if err != nil {
 		a.logger.Fatal().Err(err).Msg("gNMI client failed")

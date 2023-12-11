@@ -56,6 +56,3 @@ function help {
 # This idea is heavily inspired by: https://github.com/adriancooney/Taskfile
 TIMEFORMAT=$'\nTask completed in %3lR'
 time "${@:-help}"
-
-
-set -e

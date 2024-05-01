@@ -1,11 +1,13 @@
 package bond
 
 import (
+	"time"
+
 	"github.com/openconfig/gnmic/pkg/api"
 )
 
 const (
-	grpcServerUnixSocket = "unix:///opt/srlinux/var/run/sr_gnmi_server"
+	grpcServerUnixSocket = "unix:///opt/srlinux/var/run/sr_grpc_server_insecure-mgmt" // grpc-server insecure-mgmt
 	jsonIETFEncoding     = "json_ietf"
 )
 
@@ -19,6 +21,7 @@ func (a *Agent) newGNMITarget() error {
 		api.Username(defaultUsername),
 		api.Password(defaultPassword),
 		api.Insecure(true),
+		api.Timeout(10*time.Second),
 	)
 	if err != nil {
 		a.logger.Fatal().Err(err).Msg("gNMI target creation failed")

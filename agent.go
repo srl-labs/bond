@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/nokia/srlinux-ndk-go/ndk"
-	"github.com/openconfig/gnmic/pkg/target"
+	"github.com/openconfig/gnmic/pkg/api/target"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

@@ -27,6 +27,11 @@ type Notifications struct {
 	// Method ReceiveIntfNotifications starts stream
 	// and populates notifications in chan Interface.
 	Interface chan *ndk.InterfaceNotification
+
+	// Route chan receives streamed route notifications.
+	// Method ReceiveRouteNotifications starts stream
+	// and populates notifications in chan Route.
+	Route chan *ndk.IpRouteNotification
 }
 
 // createNotificationStream creates a notification stream and returns the Stream ID.

@@ -8,6 +8,27 @@ import (
 	"github.com/nokia/srlinux-ndk-go/ndk"
 )
 
+// Notifications contains channels for various NDK notifications.
+// By default, Config notifications are streamed and stored in config buffer.
+// To populate channels for other notification types (e.g. interface),
+// explicit calls to `Receive<type>Notifications` methods are required.
+type Notifications struct {
+	// ConfigReceived chan receives the value when the full config
+	// is received by the stream client.
+	ConfigReceived chan struct{}
+
+	// Config holds the application's config as json_ietf encoded string
+	// that is retrieved from the gNMI server once the commit is done.
+	// Applications are expected to read from this buffer to populate
+	// their Config and State struct.
+	Config []byte
+
+	// Interface chan receives streamed interface notifications.
+	// Method ReceiveIntfNotifications starts stream
+	// and populates notifications in chan Interface.
+	Interface chan *ndk.InterfaceNotification
+}
+
 // createNotificationStream creates a notification stream and returns the Stream ID.
 // Stream ID is used to register notifications for other services.
 // It retries with retryTimeout until it succeeds.

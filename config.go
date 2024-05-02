@@ -71,7 +71,7 @@ func (a *Agent) addConfigSubscription(ctx context.Context, streamID uint64) {
 }
 
 // handleConfigNotifications logs configuration notifications received
-// from the config notification stream and signals the ConfigReceivedCh
+// from the config notification stream and signals the ConfigReceived chan
 // when the full config is received.
 func (a *Agent) handleConfigNotifications(
 	notifStreamResp *ndk.NotificationStreamResponse,
@@ -102,7 +102,7 @@ func (a *Agent) handleConfigNotifications(
 
 			a.getConfigWithGNMI()
 
-			a.ConfigReceivedCh <- struct{}{}
+			a.Notifs.ConfigReceived <- struct{}{}
 		}
 	}
 }

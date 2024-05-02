@@ -8,12 +8,12 @@ import (
 )
 
 // ReceiveIntfNotifications starts an interface notification stream
-// and sends notifications to Agent's `IntfNotifCh` channel.
+// and sends notifications to channel `Interface`.
 // If the main execution intends to continue running after calling this method,
 // it should be called as a goroutine.
-// `IntfNotifCh` is a channel that carries values of type ndk.InterfaceNotification.
+// `Interface` chan carries values of type ndk.InterfaceNotification.
 func (a *Agent) ReceiveIntfNotifications(ctx context.Context) {
-	defer close(a.IntfNotifCh)
+	defer close(a.Notifs.Interface)
 	intfStream := a.startInterfaceNotificationStream(ctx)
 
 	for intfStreamResp := range intfStream {
@@ -34,7 +34,7 @@ func (a *Agent) ReceiveIntfNotifications(ctx context.Context) {
 					Msgf("Empty interface notification:%+v", n)
 				continue
 			}
-			a.IntfNotifCh <- intfNotif
+			a.Notifs.Interface <- intfNotif
 		}
 	}
 }

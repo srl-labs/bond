@@ -41,29 +41,19 @@ type Agent struct {
 	NotificationServiceClient ndk.SdkNotificationServiceClient
 	TelemetryServiceClient    ndk.SdkMgrTelemetryServiceClient
 
-	// configReceivedCh chan receives the value when the full config
-	// is received by the stream client.
-	ConfigReceivedCh chan struct{}
-
-	// IntfNotifCh is a channel used to receive streamed Interface notifications.
-	// Method RecvInterfaceNotifications starts stream
-	// and sends interface notifications to IntfNotifCh.
-	IntfNotifCh chan *ndk.InterfaceNotification
-
-	// Config holds the application's config as json_ietf encoded string
-	// that is retrieved from the gNMI server once the commit is done.
-	// Applications are expected to read from this buffer to populate
-	// their Config and State struct.
-	Config []byte
+	// NDK streamed notification channels
+	Notifs *Notifications
 }
 
 // NewAgent creates a new Agent instance.
 func NewAgent(name string, opts ...Option) (*Agent, error) {
 	a := &Agent{
-		Name:             name,
-		retryTimeout:     defaultRetryTimeout,
-		ConfigReceivedCh: make(chan struct{}),
-		IntfNotifCh:      make(chan *ndk.InterfaceNotification),
+		Name:         name,
+		retryTimeout: defaultRetryTimeout,
+		Notifs: &Notifications{
+			ConfigReceived: make(chan struct{}),
+			Interface:      make(chan *ndk.InterfaceNotification),
+		},
 	}
 
 	for _, opt := range opts {

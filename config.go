@@ -27,7 +27,7 @@ func (a *Agent) receiveConfigNotifications(ctx context.Context) {
 		}
 
 		a.logger.Info().
-			Msgf("Received notifications:\n%s", b)
+			Msgf("Received Config notifications:\n%s", b)
 
 		a.handleConfigNotifications(cfgStreamResp)
 	}
@@ -39,7 +39,7 @@ func (a *Agent) startConfigNotificationStream(ctx context.Context) chan *ndk.Not
 
 	a.logger.Info().
 		Uint64("stream-id", streamID).
-		Msg("Notification stream created")
+		Msg("Config notification stream created")
 
 	a.addConfigSubscription(ctx, streamID)
 
@@ -71,7 +71,7 @@ func (a *Agent) addConfigSubscription(ctx context.Context, streamID uint64) {
 }
 
 // handleConfigNotifications logs configuration notifications received
-// from the config notification stream and signals the ConfigReceivedCh
+// from the config notification stream and signals the ConfigReceived chan
 // when the full config is received.
 func (a *Agent) handleConfigNotifications(
 	notifStreamResp *ndk.NotificationStreamResponse,
@@ -102,7 +102,7 @@ func (a *Agent) handleConfigNotifications(
 
 			a.getConfigWithGNMI()
 
-			a.ConfigReceivedCh <- struct{}{}
+			a.Notifications.ConfigReceived <- struct{}{}
 		}
 	}
 }

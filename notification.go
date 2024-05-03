@@ -42,6 +42,11 @@ type Notifications struct {
 	// Method ReceiveNwInstNotifications starts stream
 	// and populates notifications in chan NwInst.
 	NwInst chan *ndk.NetworkInstanceNotification
+
+	// Lldp chan receives streamed LLDP neighbor notifications.
+	// Method ReceiveLldpNotifications starts stream
+	// and populates notifications in chan Lldp.
+	Lldp chan *ndk.LldpNeighborNotification
 }
 
 // createNotificationStream creates a notification stream and returns the Stream ID.

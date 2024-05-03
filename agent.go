@@ -56,6 +56,7 @@ func NewAgent(name string, opts ...Option) (*Agent, error) {
 			Route:          make(chan *ndk.IpRouteNotification),
 			NextHopGroup:   make(chan *ndk.NextHopGroupNotification),
 			NwInst:         make(chan *ndk.NetworkInstanceNotification),
+			Lldp:           make(chan *ndk.LldpNeighborNotification),
 		},
 	}
 

@@ -13,7 +13,7 @@ import (
 // it should be called as a goroutine.
 // `AppId` chan carries values of type ndk.AppIdentNotification
 func (a *Agent) ReceiveAppIdNotifications(ctx context.Context) {
-	defer close(a.Notifs.AppId)
+	defer close(a.Notifications.AppId)
 	AppIdStream := a.startAppIdNotificationStream(ctx)
 
 	for AppIdStreamResp := range AppIdStream {
@@ -34,7 +34,7 @@ func (a *Agent) ReceiveAppIdNotifications(ctx context.Context) {
 					Msgf("Empty AppId notification:%+v", n)
 				continue
 			}
-			a.Notifs.AppId <- AppIdNotif
+			a.Notifications.AppId <- AppIdNotif
 		}
 	}
 }

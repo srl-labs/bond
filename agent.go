@@ -42,7 +42,7 @@ type Agent struct {
 	TelemetryServiceClient    ndk.SdkMgrTelemetryServiceClient
 
 	// NDK streamed notification channels
-	Notifs *Notifications
+	Notifications *Notifications
 }
 
 // NewAgent creates a new Agent instance.
@@ -50,7 +50,7 @@ func NewAgent(name string, opts ...Option) (*Agent, error) {
 	a := &Agent{
 		Name:         name,
 		retryTimeout: defaultRetryTimeout,
-		Notifs: &Notifications{
+		Notifications: &Notifications{
 			ConfigReceived: make(chan struct{}),
 			Interface:      make(chan *ndk.InterfaceNotification),
 			Route:          make(chan *ndk.IpRouteNotification),

@@ -7,39 +7,39 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 )
 
-// ReceiveNhgNotifications starts a next hop group notification stream
+// ReceiveNexthopGroupNotifications starts a next hop group notification stream
 // and sends notifications to channel `NextHopGroup`.
 // If the main execution intends to continue running after calling this method,
 // it should be called as a goroutine.
 // `NextHopGroup` chan carries values of type ndk.NextHopGroupNotification
-func (a *Agent) ReceiveNhgNotifications(ctx context.Context) {
-	defer close(a.Notifs.NextHopGroup)
+func (a *Agent) ReceiveNexthopGroupNotifications(ctx context.Context) {
+	defer close(a.Notifications.NextHopGroup)
 	nhgStream := a.startNhgNotificationStream(ctx)
 
 	for nhgStreamResp := range nhgStream {
 		b, err := prototext.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(nhgStreamResp)
 		if err != nil {
 			a.logger.Info().
-				Msgf("Next hop group notification Marshal failed: %+v", err)
+				Msgf("Nexthop group notification Marshal failed: %+v", err)
 			continue
 		}
 
 		a.logger.Info().
-			Msgf("Received Nhg notifications:\n%s", b)
+			Msgf("Received Nexthop group notifications:\n%s", b)
 
 		for _, n := range nhgStreamResp.GetNotification() {
 			nhgNotif := n.GetNhg()
 			if nhgNotif == nil {
 				a.logger.Info().
-					Msgf("Empty Next hop group notification:%+v", n)
+					Msgf("Empty Nexthop group notification:%+v", n)
 				continue
 			}
-			a.Notifs.NextHopGroup <- nhgNotif
+			a.Notifications.NextHopGroup <- nhgNotif
 		}
 	}
 }
 
-// startNhgNotificationStream starts a notification stream for Next hop group service notifications.
+// startNhgNotificationStream starts a notification stream for Nexthop Group service notifications.
 func (a *Agent) startNhgNotificationStream(ctx context.Context) chan *ndk.NotificationStreamResponse {
 	streamID := a.createNotificationStream(ctx)
 
@@ -56,7 +56,7 @@ func (a *Agent) startNhgNotificationStream(ctx context.Context) chan *ndk.Notifi
 	return streamChan
 }
 
-// addNhgSubscription adds a subscription for Next Hop Group service notifications
+// addNhgSubscription adds a subscription for Nexthop Group service notifications
 // to the allocated notification stream.
 func (a *Agent) addNhgSubscription(ctx context.Context, streamID uint64) {
 	// create notification register request for nhg service

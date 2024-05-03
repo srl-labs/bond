@@ -24,7 +24,7 @@ type Notifications struct {
 	Config []byte
 
 	// Interface chan receives streamed interface notifications.
-	// Method ReceiveIntfNotifications starts stream
+	// Method ReceiveInterfaceNotifications starts stream
 	// and populates notifications in chan Interface.
 	Interface chan *ndk.InterfaceNotification
 
@@ -34,17 +34,17 @@ type Notifications struct {
 	Route chan *ndk.IpRouteNotification
 
 	// NextHopGroup chan receives streamed next hop group notifications.
-	// Method ReceiveNhgNotifications starts stream
+	// Method ReceiveNexthopGroupNotifications starts stream
 	// and populates notifications in chan NextHopGroup.
 	NextHopGroup chan *ndk.NextHopGroupNotification
 
 	// NwInst chan receives streamed network instance notifications.
-	// Method ReceiveNwInstNotifications starts stream
+	// Method ReceiveNetworkInstanceNotifications starts stream
 	// and populates notifications in chan NwInst.
 	NwInst chan *ndk.NetworkInstanceNotification
 
 	// Lldp chan receives streamed LLDP neighbor notifications.
-	// Method ReceiveLldpNotifications starts stream
+	// Method ReceiveLLDPNotifications starts stream
 	// and populates notifications in chan Lldp.
 	Lldp chan *ndk.LldpNeighborNotification
 

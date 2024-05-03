@@ -7,13 +7,13 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 )
 
-// ReceiveNwInstNotifications starts an network instance notification
+// ReceiveNetworkInstanceNotifications starts an network instance notification
 // stream and sends notifications to channel `NwInst`.
 // If the main execution intends to continue running after calling this method,
 // it should be called as a goroutine.
 // `NwInst` chan carries values of type ndk.NetworkInstanceNotification
-func (a *Agent) ReceiveNwInstNotifications(ctx context.Context) {
-	defer close(a.Notifs.NwInst)
+func (a *Agent) ReceiveNetworkInstanceNotifications(ctx context.Context) {
+	defer close(a.Notifications.NwInst)
 	nwInstStream := a.startNwInstNotificationStream(ctx)
 
 	for nwInstStreamResp := range nwInstStream {
@@ -34,7 +34,7 @@ func (a *Agent) ReceiveNwInstNotifications(ctx context.Context) {
 					Msgf("Empty network instance notification:%+v", n)
 				continue
 			}
-			a.Notifs.NwInst <- nwInstNotif
+			a.Notifications.NwInst <- nwInstNotif
 		}
 	}
 }

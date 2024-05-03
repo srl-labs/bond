@@ -7,13 +7,13 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 )
 
-// ReceiveIntfNotifications starts an interface notification stream
+// ReceiveInterfaceNotifications starts an interface notification stream
 // and sends notifications to channel `Interface`.
 // If the main execution intends to continue running after calling this method,
 // it should be called as a goroutine.
 // `Interface` chan carries values of type ndk.InterfaceNotification.
-func (a *Agent) ReceiveIntfNotifications(ctx context.Context) {
-	defer close(a.Notifs.Interface)
+func (a *Agent) ReceiveInterfaceNotifications(ctx context.Context) {
+	defer close(a.Notifications.Interface)
 	intfStream := a.startInterfaceNotificationStream(ctx)
 
 	for intfStreamResp := range intfStream {
@@ -25,7 +25,7 @@ func (a *Agent) ReceiveIntfNotifications(ctx context.Context) {
 		}
 
 		a.logger.Info().
-			Msgf("Received notifications:\n%s", b)
+			Msgf("Received Interface notifications:\n%s", b)
 
 		for _, n := range intfStreamResp.GetNotification() {
 			intfNotif := n.GetIntf()
@@ -34,7 +34,7 @@ func (a *Agent) ReceiveIntfNotifications(ctx context.Context) {
 					Msgf("Empty interface notification:%+v", n)
 				continue
 			}
-			a.Notifs.Interface <- intfNotif
+			a.Notifications.Interface <- intfNotif
 		}
 	}
 }
@@ -45,7 +45,7 @@ func (a *Agent) startInterfaceNotificationStream(ctx context.Context) chan *ndk.
 
 	a.logger.Info().
 		Uint64("stream-id", streamID).
-		Msg("Notification stream created")
+		Msg("Interface notification stream created")
 
 	a.addIntfSubscription(ctx, streamID)
 

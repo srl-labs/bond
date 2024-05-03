@@ -7,13 +7,13 @@ import (
 	"google.golang.org/protobuf/encoding/prototext"
 )
 
-// ReceiveLldpNotifications starts an LLDP neighbor notification
+// ReceiveLLDPNotifications starts an LLDP neighbor notification
 // stream and sends notifications to channel `Lldp`.
 // If the main execution intends to continue running after calling this method,
 // it should be called as a goroutine.
 // `Lldp` chan carries values of type ndk.LldpNeighborNotification
-func (a *Agent) ReceiveLldpNotifications(ctx context.Context) {
-	defer close(a.Notifs.Lldp)
+func (a *Agent) ReceiveLLDPNotifications(ctx context.Context) {
+	defer close(a.Notifications.Lldp)
 	LldpStream := a.startLldpNotificationStream(ctx)
 
 	for LldpStreamResp := range LldpStream {
@@ -34,7 +34,7 @@ func (a *Agent) ReceiveLldpNotifications(ctx context.Context) {
 					Msgf("Empty Lldp Neighbor notification:%+v", n)
 				continue
 			}
-			a.Notifs.Lldp <- LldpNotif
+			a.Notifications.Lldp <- LldpNotif
 		}
 	}
 }

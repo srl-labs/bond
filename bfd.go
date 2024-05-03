@@ -13,7 +13,7 @@ import (
 // it should be called as a goroutine.
 // `Bfd` chan carries values of type ndk.BfdSessionNotification
 func (a *Agent) ReceiveBfdNotifications(ctx context.Context) {
-	defer close(a.Notifs.Bfd)
+	defer close(a.Notifications.Bfd)
 	BfdStream := a.startBfdNotificationStream(ctx)
 
 	for BfdStreamResp := range BfdStream {
@@ -34,7 +34,7 @@ func (a *Agent) ReceiveBfdNotifications(ctx context.Context) {
 					Msgf("Empty Bfd Session notification:%+v", n)
 				continue
 			}
-			a.Notifs.Bfd <- BfdNotif
+			a.Notifications.Bfd <- BfdNotif
 		}
 	}
 }

@@ -13,7 +13,7 @@ import (
 // it should be called as a goroutine.
 // `Route` chan carries values of type ndk.IpRouteNotification
 func (a *Agent) ReceiveRouteNotifications(ctx context.Context) {
-	defer close(a.Notifs.Route)
+	defer close(a.Notifications.Route)
 	routeStream := a.startRouteNotificationStream(ctx)
 
 	for routeStreamResp := range routeStream {
@@ -25,7 +25,7 @@ func (a *Agent) ReceiveRouteNotifications(ctx context.Context) {
 		}
 
 		a.logger.Info().
-			Msgf("Received notifications:\n%s", b)
+			Msgf("Received Route notifications:\n%s", b)
 
 		for _, n := range routeStreamResp.GetNotification() {
 			routeNotif := n.GetRoute()
@@ -34,7 +34,7 @@ func (a *Agent) ReceiveRouteNotifications(ctx context.Context) {
 					Msgf("Empty route notification:%+v", n)
 				continue
 			}
-			a.Notifs.Route <- routeNotif
+			a.Notifications.Route <- routeNotif
 		}
 	}
 }
@@ -45,7 +45,7 @@ func (a *Agent) startRouteNotificationStream(ctx context.Context) chan *ndk.Noti
 
 	a.logger.Info().
 		Uint64("stream-id", streamID).
-		Msg("Notification stream created")
+		Msg("Route notification stream created")
 
 	a.addRouteSubscription(ctx, streamID)
 

@@ -36,13 +36,19 @@ type Agent struct {
 
 	gNMITarget *target.Target
 
-	// NDK Service clients
-	SDKMgrServiceClient       ndk.SdkMgrServiceClient
-	NotificationServiceClient ndk.SdkNotificationServiceClient
-	TelemetryServiceClient    ndk.SdkMgrTelemetryServiceClient
+	// NDK Service client stubs
+	stubs *stubs
 
 	// NDK streamed notification channels
 	Notifications *Notifications
+}
+
+type stubs struct {
+	sdkMgrService       ndk.SdkMgrServiceClient
+	notificationService ndk.SdkNotificationServiceClient
+	telemetryService    ndk.SdkMgrTelemetryServiceClient
+	routeService        ndk.SdkMgrRouteServiceClient
+	nextHopGroupService ndk.SdkMgrNextHopGroupServiceClient
 }
 
 // NewAgent creates a new Agent instance.
@@ -82,9 +88,18 @@ func (a *Agent) Start() error {
 
 	a.logger.Info().Msg("Connected to NDK socket")
 
-	a.SDKMgrServiceClient = ndk.NewSdkMgrServiceClient(a.gRPCConn)
-	a.NotificationServiceClient = ndk.NewSdkNotificationServiceClient(a.gRPCConn)
-	a.TelemetryServiceClient = ndk.NewSdkMgrTelemetryServiceClient(a.gRPCConn)
+	// a.stubs.sdkMgrService = ndk.NewSdkMgrServiceClient(a.gRPCConn)
+	// a.NotificationServiceClient = ndk.NewSdkNotificationServiceClient(a.gRPCConn)
+	// a.TelemetryServiceClient = ndk.NewSdkMgrTelemetryServiceClient(a.gRPCConn)
+
+	// Create NDK client stubs
+	a.stubs = &stubs{
+		sdkMgrService:       ndk.NewSdkMgrServiceClient(a.gRPCConn),
+		notificationService: ndk.NewSdkNotificationServiceClient(a.gRPCConn),
+		telemetryService:    ndk.NewSdkMgrTelemetryServiceClient(a.gRPCConn),
+		routeService:        ndk.NewSdkMgrRouteServiceClient(a.gRPCConn),
+		nextHopGroupService: ndk.NewSdkMgrNextHopGroupServiceClient(a.gRPCConn),
+	}
 
 	// register agent
 	err = a.register()
@@ -127,7 +142,7 @@ func (a *Agent) connect() error {
 
 // register registers the agent with NDK.
 func (a *Agent) register() error {
-	r, err := a.SDKMgrServiceClient.AgentRegister(a.ctx, &ndk.AgentRegistrationRequest{})
+	r, err := a.stubs.sdkMgrService.AgentRegister(a.ctx, &ndk.AgentRegistrationRequest{})
 	if err != nil || r.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {
 		a.logger.Fatal().
 			Err(err).
@@ -147,7 +162,7 @@ func (a *Agent) register() error {
 
 // unregister unregisters the agent from NDK.
 func (a *Agent) unregister() error {
-	r, err := a.SDKMgrServiceClient.AgentUnRegister(a.ctx, &ndk.AgentRegistrationRequest{})
+	r, err := a.stubs.sdkMgrService.AgentUnRegister(a.ctx, &ndk.AgentRegistrationRequest{})
 	if err != nil || r.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {
 		a.logger.Fatal().
 			Err(err).

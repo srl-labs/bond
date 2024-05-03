@@ -37,6 +37,11 @@ type Notifications struct {
 	// Method ReceiveNhgNotifications starts stream
 	// and populates notifications in chan NextHopGroup.
 	NextHopGroup chan *ndk.NextHopGroupNotification
+
+	// NwInst chan receives streamed network instance notifications.
+	// Method ReceiveNwInstNotifications starts stream
+	// and populates notifications in chan NwInst.
+	NwInst chan *ndk.NetworkInstanceNotification
 }
 
 // createNotificationStream creates a notification stream and returns the Stream ID.

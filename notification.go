@@ -52,6 +52,11 @@ type Notifications struct {
 	// Method ReceiveBfdNotifications starts stream
 	// and populates notifications in chan Bfd.
 	Bfd chan *ndk.BfdSessionNotification
+
+	// AppId chan receives streamed App identifier notifications.
+	// Method ReceiveAppIdNotifications starts stream
+	// and populates notifications in chan AppId.
+	AppId chan *ndk.AppIdentNotification
 }
 
 // createNotificationStream creates a notification stream and returns the Stream ID.

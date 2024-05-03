@@ -32,6 +32,11 @@ type Notifications struct {
 	// Method ReceiveRouteNotifications starts stream
 	// and populates notifications in chan Route.
 	Route chan *ndk.IpRouteNotification
+
+	// NextHopGroup chan receives streamed next hop group notifications.
+	// Method ReceiveNhgNotifications starts stream
+	// and populates notifications in chan NextHopGroup.
+	NextHopGroup chan *ndk.NextHopGroupNotification
 }
 
 // createNotificationStream creates a notification stream and returns the Stream ID.

@@ -54,6 +54,7 @@ func NewAgent(name string, opts ...Option) (*Agent, error) {
 			ConfigReceived: make(chan struct{}),
 			Interface:      make(chan *ndk.InterfaceNotification),
 			Route:          make(chan *ndk.IpRouteNotification),
+			NextHopGroup:   make(chan *ndk.NextHopGroupNotification),
 		},
 	}
 

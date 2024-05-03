@@ -57,6 +57,7 @@ func NewAgent(name string, opts ...Option) (*Agent, error) {
 			NextHopGroup:   make(chan *ndk.NextHopGroupNotification),
 			NwInst:         make(chan *ndk.NetworkInstanceNotification),
 			Lldp:           make(chan *ndk.LldpNeighborNotification),
+			Bfd:            make(chan *ndk.BfdSessionNotification),
 		},
 	}
 

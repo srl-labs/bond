@@ -43,6 +43,8 @@ type Agent struct {
 	Notifications *Notifications
 }
 
+// stubs contains NDK service client stubs
+// used to call service methods.
 type stubs struct {
 	sdkMgrService       ndk.SdkMgrServiceClient
 	notificationService ndk.SdkNotificationServiceClient
@@ -88,11 +90,7 @@ func (a *Agent) Start() error {
 
 	a.logger.Info().Msg("Connected to NDK socket")
 
-	// a.stubs.sdkMgrService = ndk.NewSdkMgrServiceClient(a.gRPCConn)
-	// a.NotificationServiceClient = ndk.NewSdkNotificationServiceClient(a.gRPCConn)
-	// a.TelemetryServiceClient = ndk.NewSdkMgrTelemetryServiceClient(a.gRPCConn)
-
-	// Create NDK client stubs
+	// create NDK client stubs
 	a.stubs = &stubs{
 		sdkMgrService:       ndk.NewSdkMgrServiceClient(a.gRPCConn),
 		notificationService: ndk.NewSdkNotificationServiceClient(a.gRPCConn),

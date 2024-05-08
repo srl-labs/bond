@@ -67,7 +67,7 @@ func (a *Agent) createNotificationStream(ctx context.Context) uint64 {
 
 	for {
 		// get subscription and streamID
-		notificationResponse, err := a.SDKMgrServiceClient.NotificationRegister(ctx,
+		notificationResponse, err := a.stubs.sdkMgrService.NotificationRegister(ctx,
 			&ndk.NotificationRegisterRequest{
 				Op: ndk.NotificationRegisterRequest_Create,
 			})
@@ -131,7 +131,7 @@ func (a *Agent) getNotificationStreamClient(ctx context.Context, streamID uint64
 	retry := time.NewTicker(a.retryTimeout)
 
 	for {
-		streamClient, err := a.NotificationServiceClient.NotificationStream(ctx,
+		streamClient, err := a.stubs.notificationService.NotificationStream(ctx,
 			&ndk.NotificationStreamRequest{
 				StreamId: streamID,
 			})

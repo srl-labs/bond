@@ -21,7 +21,7 @@ func (a *Agent) DeleteState() error {
 
 	key := &ndk.TelemetryKey{JsPath: rootJSPath}
 
-	r, err := a.TelemetryServiceClient.TelemetryDelete(a.ctx, &ndk.TelemetryDeleteRequest{
+	r, err := a.stubs.telemetryService.TelemetryDelete(a.ctx, &ndk.TelemetryDeleteRequest{
 		Key: []*ndk.TelemetryKey{key},
 	})
 	if err != nil || r.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
@@ -52,7 +52,7 @@ func (a *Agent) UpdateState(key, data string) error {
 
 	a.logger.Info().Msgf("Telemetry Request: %+v", req)
 
-	r, err := a.TelemetryServiceClient.TelemetryAddOrUpdate(a.ctx, req)
+	r, err := a.stubs.telemetryService.TelemetryAddOrUpdate(a.ctx, req)
 	if err != nil || r.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
 		return fmt.Errorf("%w: key: %s, data: %s", ErrStateAddOrUpdateFailed, key, data)
 	}

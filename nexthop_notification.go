@@ -69,7 +69,7 @@ func (a *Agent) addNhgSubscription(ctx context.Context, streamID uint64) {
 		},
 	}
 
-	registerResp, err := a.SDKMgrServiceClient.NotificationRegister(ctx, notificationRegisterReq)
+	registerResp, err := a.stubs.sdkMgrService.NotificationRegister(ctx, notificationRegisterReq)
 	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
 		a.logger.Printf("agent %s failed registering to notification with req=%+v: %v",
 			a.Name, notificationRegisterReq, err)

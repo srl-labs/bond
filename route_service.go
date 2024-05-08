@@ -16,11 +16,12 @@ var ErrRouteAddOrUpdateFailed = errors.New("route add or update failed")
 var ErrRouteSyncStart = errors.New("route sync start failed")
 var ErrRouteSyncEnd = errors.New("route sync end failed")
 
-// Route options when adding/updating IP routes.
+// Options when adding/updating IP routes.
 type RouteOption func(r *ndk.RouteInfo)
 
 // New creates a NDK route with the provided route option fields.
-// Mandatory: WithNetInstName, WithIpPrefix, WithNextHopGroup
+// A valid route requires the following option fields:
+// WithNetInstName, WithIpPrefix, and WithNextHopGroup.
 // Optional: WithPreference, WithMetric
 func NewRoute(options ...RouteOption) *ndk.RouteInfo {
 	r := new(ndk.RouteInfo)
@@ -43,15 +44,15 @@ func WithNetInstName(n string) RouteOption {
 }
 
 // WithIpPrefix sets the route ipv4 or ipv6 prefix.
-// addr string is in the format of  "ip/preflen"
+// prefix string is in the format of  "ip/preflen"
 // where ip is the IP address and preflen is the length of the prefix.
 // If the input string does not match the expected format,
 // RouteAdd/Update returns an error.
 //
 // Example: 192.168.11.2/30
-func WithIpPrefix(addr string) RouteOption {
+func WithIpPrefix(prefix string) RouteOption {
 	return func(r *ndk.RouteInfo) {
-		addr, preflen := parseIP(addr)
+		addr, preflen := parseIP(prefix)
 		r.Key.IpPrefix = &ndk.IpAddrPrefLenPb{
 			IpAddr:       addr,
 			PrefixLength: preflen,
@@ -62,9 +63,10 @@ func WithIpPrefix(addr string) RouteOption {
 // WithNextHopGroupName sets the route Next Hop Group Name.
 // NDK expects the input nhg to end in the format "_sdk" or "_SDK".
 // If the input string does not match the expected format,
-// RouteAdd/Update returns an error.
-// Specified nhg must be a valid NDK next hop group that is programmed
-// with method NextHopGroupAdd. It cannot be configured on SRL.
+// RouteAdd returns an error.
+// Specified nhg also must be a valid NDK next hop group that is programmed
+// with method NextHopGroupAdd or NextHopGroupUpdate.
+// It cannot be a nexthop group configured on SRL.
 //
 // Example: ndk_sdk
 func WithNextHopGroupName(nhg string) RouteOption {
@@ -134,7 +136,7 @@ func (a *Agent) RouteAdd(routes ...*ndk.RouteInfo) error {
 // FIB with routes 1.1.1.1, 1.1.1.3.
 // Route 1.1.1.2 that was previously added, is deleted due to the update.
 func (a *Agent) RouteUpdate(routes ...*ndk.RouteInfo) error {
-	err := a.syncStart()
+	err := a.routeSyncStart()
 	if err != nil {
 		return err
 	}
@@ -142,7 +144,7 @@ func (a *Agent) RouteUpdate(routes ...*ndk.RouteInfo) error {
 	if err != nil {
 		return err
 	}
-	err = a.syncEnd()
+	err = a.routeSyncEnd()
 	if err != nil {
 		return err
 	}
@@ -197,8 +199,8 @@ func (a *Agent) RouteDelete(networkInstance string, prefixes ...string) error {
 	return nil
 }
 
-// syncStart starts syncing agent IP routes in SRLinux.
-func (a *Agent) syncStart() error {
+// routeSyncStart starts syncing agent IP routes in SRLinux.
+func (a *Agent) routeSyncStart() error {
 	resp, err := a.stubs.routeService.SyncStart(a.ctx, &ndk.SyncRequest{})
 	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
 		a.logger.Error().
@@ -210,8 +212,8 @@ func (a *Agent) syncStart() error {
 	return nil
 }
 
-// syncEnd ends syncing agent IP routes in SRLinux.
-func (a *Agent) syncEnd() error {
+// routeSyncEnd ends syncing agent IP routes in SRLinux.
+func (a *Agent) routeSyncEnd() error {
 	resp, err := a.stubs.routeService.SyncEnd(a.ctx, &ndk.SyncRequest{})
 	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
 		a.logger.Error().

@@ -30,11 +30,11 @@ type Agent struct {
 	AppID       uint32
 	appRootPath string
 
-	gRPCConn     *grpc.ClientConn
-	logger       *zerolog.Logger
-	retryTimeout time.Duration
-
-	gNMITarget *target.Target
+	gRPCConn        *grpc.ClientConn
+	logger          *zerolog.Logger
+	retryTimeout    time.Duration
+	gNMITarget      *target.Target
+	keepAliveConfig *keepAliveConfig
 
 	// NDK Service client stubs
 	stubs *stubs
@@ -51,6 +51,14 @@ type stubs struct {
 	telemetryService    ndk.SdkMgrTelemetryServiceClient
 	routeService        ndk.SdkMgrRouteServiceClient
 	nextHopGroupService ndk.SdkMgrNextHopGroupServiceClient
+}
+
+// keepAliveConfig contains settings for keepalive messages.
+// app will log every interval seconds
+// until ndk mgr has failed >= threshold times.
+type keepAliveConfig struct {
+	interval  time.Duration
+	threshold int
 }
 
 // NewAgent creates a new Agent instance.
@@ -103,6 +111,11 @@ func (a *Agent) Start() error {
 	err = a.register()
 	if err != nil {
 		return err
+	}
+
+	// enable keepalives
+	if isKeepAliveSet()(a) {
+		go a.keepAlive(a.ctx, a.keepAliveConfig.interval, a.keepAliveConfig.threshold)
 	}
 
 	a.newGNMITarget()
@@ -176,4 +189,50 @@ func (a *Agent) unregister() error {
 		Msg("Application unregistered successfully!")
 
 	return nil
+}
+
+// keepAlive sends periodic keepalive messages until NDK mgr has failed threshold times.
+// SR Linux will respond with a status message: kSdkMgrSuccess or kSdkMgrFailed.
+func (a *Agent) keepAlive(ctx context.Context, interval time.Duration, threshold int) {
+	errCounter := 0
+	timer := time.NewTicker(interval)
+	retry := time.NewTicker(a.retryTimeout)
+	for {
+		select {
+		case <-ctx.Done():
+			retry.Stop()
+			timer.Stop()
+			a.logger.Info().
+				Str("name", a.Name).
+				Msg("Agent stopped sending keepalives.")
+			return
+		case <-timer.C: // send keepalives every interval
+			resp, err := a.stubs.sdkMgrService.KeepAlive(a.ctx, &ndk.KeepAliveRequest{})
+			if err != nil { // retry RPC if failure
+				a.logger.Info().
+					Err(err).
+					Str("status", resp.GetStatus().String()).
+					Msg("Agent failed to send keepalives.")
+				a.logger.Printf("agent %s retrying in %s", a.Name, a.retryTimeout)
+				time.Sleep(a.retryTimeout)
+				<-retry.C
+				continue
+			}
+			status := resp.GetStatus()
+			a.logger.Info().
+				Str("name", a.Name).
+				Msgf("Agent sent keepalive at %s and received response status: %s", time.Now(), status.String())
+			if status == ndk.SdkMgrStatus_kSdkMgrFailed { // sdk_mgr has failed
+				errCounter += 1
+				if errCounter >= a.keepAliveConfig.threshold {
+					a.logger.Info().
+						Str("name", a.Name).
+						Msgf("Agent keepalives have been stopped because sdk mgr has failed %d times.", threshold)
+					return
+				}
+			} else { //sdk_mgr status is success
+				errCounter = 0
+			}
+		}
+	}
 }

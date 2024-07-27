@@ -61,8 +61,15 @@ type keepAliveConfig struct {
 	threshold int
 }
 
+// IsSet returns whether Agent is configured with keepalives.
+func (k *keepAliveConfig) IsSet() bool {
+	return k != nil && k.interval != 0 && k.threshold != 0
+}
+
 // NewAgent creates a new Agent instance.
-func NewAgent(name string, opts ...Option) (*Agent, error) {
+func NewAgent(name string, opts ...Option) (*Agent, []error) {
+	var errs []error
+
 	a := &Agent{
 		Name:         name,
 		retryTimeout: defaultRetryTimeout,
@@ -78,15 +85,20 @@ func NewAgent(name string, opts ...Option) (*Agent, error) {
 		},
 	}
 
+	// process all options and return cumulative errors
 	for _, opt := range opts {
 		if err := opt(a); err != nil {
-			return nil, err
+			errs = append(errs, err)
 		}
+	}
+
+	if len(errs) > 0 {
+		return nil, errs
 	}
 
 	a.ctx = metadata.AppendToOutgoingContext(a.ctx, agentMetadataKey, a.Name)
 
-	return a, nil
+	return a, errs
 }
 
 func (a *Agent) Start() error {
@@ -114,7 +126,7 @@ func (a *Agent) Start() error {
 	}
 
 	// enable keepalives
-	if isKeepAliveSet()(a) {
+	if a.keepAliveConfig.IsSet() {
 		go a.keepAlive(a.ctx, a.keepAliveConfig.interval, a.keepAliveConfig.threshold)
 	}
 

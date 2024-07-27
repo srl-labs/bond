@@ -2,14 +2,13 @@ package bond
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/rs/zerolog"
 )
 
 type Option func(*Agent) error
-
-type optionSet func(*Agent) bool
 
 // WithLogger sets the logger for the Agent.
 func WithLogger(logger *zerolog.Logger) Option {
@@ -39,19 +38,13 @@ func WithAppRootPath(path string) Option {
 // until ndk mgr has failed threshold times.
 func WithKeepAlive(interval time.Duration, threshold int) Option {
 	return func(a *Agent) error {
+		if interval == 0 && threshold == 0 {
+			return errors.New("configuring agent keepalives failed. interval and threshold cannot both be zero")
+		}
 		a.keepAliveConfig = &keepAliveConfig{
 			interval:  interval,
 			threshold: threshold,
 		}
 		return nil
-	}
-}
-
-// isKeepAliveSet returns whether Agent is configured with keepalives.
-func isKeepAliveSet() optionSet {
-	return func(a *Agent) bool {
-		return a.keepAliveConfig != nil &&
-			a.keepAliveConfig.interval != 0 &&
-			a.keepAliveConfig.threshold != 0
 	}
 }

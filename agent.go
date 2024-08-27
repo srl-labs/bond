@@ -3,6 +3,9 @@ package bond
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/nokia/srlinux-ndk-go/ndk"
@@ -24,8 +27,8 @@ const (
 )
 
 type Agent struct {
-	ctx context.Context
-
+	ctx         context.Context
+	cancel      context.CancelFunc
 	Name        string
 	AppID       uint32
 	appRootPath string
@@ -131,6 +134,8 @@ func (a *Agent) Start() error {
 		return err
 	}
 
+	a.exitHandler() // exit gracefully if app stops
+
 	// enable keepalives
 	if a.keepAliveConfig.IsSet() {
 		go a.keepAlive(a.ctx, a.keepAliveConfig.interval, a.keepAliveConfig.threshold)
@@ -143,17 +148,39 @@ func (a *Agent) Start() error {
 	return nil
 }
 
-func (a *Agent) Stop() error {
-	// register agent
+// exitHandle handles when the application stops and receives interrupt/SIGTERM signals.
+func (a *Agent) exitHandler() {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		<-sig // blocking until app is stopped
+		a.stop()
+	}()
+}
+
+// stop performs graceful shutdown of the application.
+// Actions performed include unregistering the agent with ndk server,
+// closing the grpc channel, and closing the program context.
+// All program goroutines will react to the context cancellation and exit.
+func (a *Agent) stop() {
+	defer a.cancel() // cancel app context
+	a.logger.Info().
+		Msg("Application has stopped and will exit gracefully.")
+	// unregister agent
 	err := a.unregister()
 	if err != nil {
-		return err
+		a.logger.Error().
+			Err(err).
+			Msg("Application has failed to unregister.")
+		return
 	}
-
 	// close gRPC connection
 	err = a.gRPCConn.Close()
-
-	return err
+	if err != nil {
+		a.logger.Error().
+			Err(err).
+			Msg("Closing gRPC connection to NDK server failed")
+	}
 }
 
 // connect attempts connecting to the NDK socket.
@@ -222,7 +249,7 @@ func (a *Agent) keepAlive(ctx context.Context, interval time.Duration, threshold
 			timer.Stop()
 			a.logger.Info().
 				Str("name", a.Name).
-				Msg("Agent stopped sending keepalives.")
+				Msg("context has been cancelled, agent stopped sending keepalives.")
 			return
 		case <-timer.C: // send keepalives every interval
 			resp, err := a.stubs.sdkMgrService.KeepAlive(a.ctx, &ndk.KeepAliveRequest{})

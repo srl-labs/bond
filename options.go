@@ -18,9 +18,16 @@ func WithLogger(logger *zerolog.Logger) Option {
 	}
 }
 
-func WithContext(ctx context.Context) Option {
+// WithContext sets the context and it's cancellation function for the Agent.
+// The context will be cancelled automatically when the application
+// is stopped and receives interrupt or SIGTERM signals.
+func WithContext(ctx context.Context, cancel context.CancelFunc) Option {
 	return func(a *Agent) error {
+		if ctx == nil || cancel == nil {
+			return errors.New("setting agent context failed. context cannot be nil")
+		}
 		a.ctx = ctx
+		a.cancel = cancel
 		return nil
 	}
 }

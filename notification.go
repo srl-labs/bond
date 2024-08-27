@@ -102,21 +102,25 @@ func (a *Agent) startNotificationStream(ctx context.Context,
 	streamClient := a.getNotificationStreamClient(ctx, streamID)
 
 	for {
+		streamResp, err := streamClient.Recv()
 		select {
 		case <-ctx.Done():
+			a.logger.Printf("agent context has cancelled, exiting notification stream.")
 			return
 		default:
-			streamResp, err := streamClient.Recv()
 			if err == io.EOF {
 				a.logger.Printf("agent %s received EOF for stream %v", a.Name, subscType)
 				a.logger.Printf("agent %s retrying in %s", a.Name, a.retryTimeout)
 
+				retry.Reset(a.retryTimeout)
 				<-retry.C // retry timer
 				continue
 			}
 			if err != nil {
 				a.logger.Printf("agent %s failed to receive notification: %v", a.Name, err)
+				a.logger.Printf("agent %s retrying in %s", a.Name, a.retryTimeout)
 
+				retry.Reset(a.retryTimeout)
 				<-retry.C // retry timer
 				continue
 			}

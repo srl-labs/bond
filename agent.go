@@ -29,6 +29,12 @@ type Agent struct {
 	Name        string
 	AppID       uint32
 	appRootPath string
+	// paths contains all paths, in XPath format,
+	// that are used to update the app's state data.
+	// Possible keys include app root path
+	// or any YANG lists.
+	// e.g. /greeter, /greeter/list-node[name=entry1]
+	paths map[string]struct{}
 
 	gRPCConn        *grpc.ClientConn
 	logger          *zerolog.Logger
@@ -73,6 +79,7 @@ func NewAgent(name string, opts ...Option) (*Agent, []error) {
 	a := &Agent{
 		Name:         name,
 		retryTimeout: defaultRetryTimeout,
+		paths:        make(map[string]struct{}),
 		Notifications: &Notifications{
 			ConfigReceived: make(chan struct{}),
 			Interface:      make(chan *ndk.InterfaceNotification),
@@ -97,7 +104,6 @@ func NewAgent(name string, opts ...Option) (*Agent, []error) {
 	}
 
 	a.ctx = metadata.AppendToOutgoingContext(a.ctx, agentMetadataKey, a.Name)
-
 	return a, errs
 }
 

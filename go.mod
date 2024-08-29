@@ -5,7 +5,7 @@ go 1.21.1
 toolchain go1.21.6
 
 require (
-	github.com/nokia/srlinux-ndk-go v0.2.0
+	github.com/nokia/srlinux-ndk-go v0.4.0-rc1
 	github.com/openconfig/gnmic/pkg/api v0.1.5
 	github.com/rs/zerolog v1.31.0
 	google.golang.org/grpc v1.61.0

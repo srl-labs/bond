@@ -42,6 +42,23 @@ func WithAppRootPath(path string) Option {
 	}
 }
 
+// WithStreamConfig enables streaming of application configs for each YANG path.
+// For example: the application will stream in separate configs
+// for the root container (e.g. /greeter) and any YANG
+// list entries (e.g. /greeter/list-node[name=entry1]).
+// Streamed config notification contents are defined by the Config type.
+// Application can receive streamed config notifications from channel Config.
+//
+// The Agent does not stream config notifications by default.
+// Instead, the agent will receive the app's entire configuration
+// and populate the FullConfig buffer.
+func WithStreamConfig() Option {
+	return func(a *Agent) error {
+		a.streamConfig = true
+		return nil
+	}
+}
+
 // WithKeepAlive enables keepalive messages for the application configuration.
 // Every interval seconds, app will send keepalive messages
 // until ndk mgr has failed threshold times.

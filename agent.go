@@ -45,6 +45,10 @@ type Agent struct {
 	gNMITarget      *target.Target
 	keepAliveConfig *keepAliveConfig
 
+	// agent will stream configs individually for each XPath
+	// instead of retrieving full app config
+	streamConfig bool
+
 	// NDK Service client stubs
 	stubs *stubs
 
@@ -84,14 +88,15 @@ func NewAgent(name string, opts ...Option) (*Agent, []error) {
 		retryTimeout: defaultRetryTimeout,
 		paths:        make(map[string]struct{}),
 		Notifications: &Notifications{
-			ConfigReceived: make(chan struct{}),
-			Interface:      make(chan *ndk.InterfaceNotification),
-			Route:          make(chan *ndk.IpRouteNotification),
-			NextHopGroup:   make(chan *ndk.NextHopGroupNotification),
-			NwInst:         make(chan *ndk.NetworkInstanceNotification),
-			Lldp:           make(chan *ndk.LldpNeighborNotification),
-			Bfd:            make(chan *ndk.BfdSessionNotification),
-			AppId:          make(chan *ndk.AppIdentNotification),
+			FullConfigReceived: make(chan struct{}),
+			Config:             make(chan *ConfigNotification),
+			Interface:          make(chan *ndk.InterfaceNotification),
+			Route:              make(chan *ndk.IpRouteNotification),
+			NextHopGroup:       make(chan *ndk.NextHopGroupNotification),
+			NwInst:             make(chan *ndk.NetworkInstanceNotification),
+			Lldp:               make(chan *ndk.LldpNeighborNotification),
+			Bfd:                make(chan *ndk.BfdSessionNotification),
+			AppId:              make(chan *ndk.AppIdentNotification),
 		},
 	}
 

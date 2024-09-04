@@ -9,19 +9,38 @@ import (
 )
 
 // Notifications contains channels for various NDK notifications.
-// By default, Config notifications are streamed and stored in config buffer.
+// By default, the entire app's configs is stored in config buffer.
 // To populate channels for other notification types (e.g. interface),
 // explicit calls to `Receive<type>Notifications` methods are required.
 type Notifications struct {
-	// ConfigReceived chan receives the value when the full config
-	// is received by the stream client.
-	ConfigReceived chan struct{}
+	// FullConfigReceived chan receives the value and stores in FullConfig
+	// when the entire application's config is received by the stream client.
+	//
+	// This channel will not be used if streaming of configs
+	// is enabled with WithStreamConfig option.
+	FullConfigReceived chan struct{}
 
-	// Config holds the application's config as json_ietf encoded string
+	// FullConfig holds the application's config as json_ietf encoded string
 	// that is retrieved from the gNMI server once the commit is done.
 	// Applications are expected to read from this buffer to populate
 	// their Config and State struct.
-	Config []byte
+	//
+	// This buffer will not be used if streaming of configs
+	// is enabled with WithStreamConfig option.
+	FullConfig []byte
+
+	// Config chan receives streamed config notifications for each individual app path.
+	// The contents of each notification is defined by ConfigNotification type.
+	// To stream configs, application has to register
+	// Agent with option WithStreamConfig.
+	// Otherwise, individual configs will not be streamed and the entire
+	// config will be populated to the FullConfig buffer.
+	// bond does not allow application to simultaneously
+	// stream individual configs while also receiving full config.
+	//
+	// This channel will not be used if Agent does not
+	// have WithStreamConfig option set.
+	Config chan *ConfigNotification
 
 	// Interface chan receives streamed interface notifications.
 	// Method ReceiveInterfaceNotifications starts stream

@@ -46,8 +46,8 @@ func (a *Agent) getConfigWithGNMI() {
 
 	// reset the config as it might contain the previous config
 	// and in case we receive an empty config (when config was deleted),
-	// we want our Config to be nil
-	a.Notifications.Config = nil
+	// we want our FullConfig to be nil
+	a.Notifications.FullConfig = nil
 
 	err := a.gNMITarget.CreateGNMIClient(a.ctx)
 	if err != nil {
@@ -72,13 +72,13 @@ func (a *Agent) getConfigWithGNMI() {
 
 	a.logger.Debug().Msgf("gNMI Get response: %+v", getResp)
 
-	// log the received config if it is not empty
+	// log the received full config if it is not empty
 	if len(getResp.GetNotification()) != 0 && len(getResp.GetNotification()[0].GetUpdate()) != 0 {
-		a.Notifications.Config = getResp.GetNotification()[0].
+		a.Notifications.FullConfig = getResp.GetNotification()[0].
 			GetUpdate()[0].
 			GetVal().
 			GetJsonIetfVal()
 
-		a.logger.Info().Msgf("Config received via gNMI:\n%s", a.Notifications.Config)
+		a.logger.Info().Msgf("Full config received via gNMI:\n%s", a.Notifications.FullConfig)
 	}
 }

@@ -49,6 +49,10 @@ type Agent struct {
 	// instead of retrieving full app config
 	streamConfig bool
 
+	// SRLinux will wait for explicit acknowledgement
+	// from app after delivering configuration.
+	waitConfigAck bool
+
 	// NDK Service client stubs
 	stubs *stubs
 
@@ -64,6 +68,7 @@ type stubs struct {
 	telemetryService    ndk.SdkMgrTelemetryServiceClient
 	routeService        ndk.SdkMgrRouteServiceClient
 	nextHopGroupService ndk.SdkMgrNextHopGroupServiceClient
+	configService       ndk.SdkMgrConfigServiceClient
 }
 
 // keepAliveConfig contains settings for keepalive messages.
@@ -106,7 +111,8 @@ func NewAgent(name string, opts ...Option) (*Agent, []error) {
 			errs = append(errs, err)
 		}
 	}
-
+	// validate final Agent configuration
+	errs = append(errs, a.validateOptions()...)
 	if len(errs) > 0 {
 		return nil, errs
 	}
@@ -131,6 +137,7 @@ func (a *Agent) Start() error {
 		telemetryService:    ndk.NewSdkMgrTelemetryServiceClient(a.gRPCConn),
 		routeService:        ndk.NewSdkMgrRouteServiceClient(a.gRPCConn),
 		nextHopGroupService: ndk.NewSdkMgrNextHopGroupServiceClient(a.gRPCConn),
+		configService:       ndk.NewSdkMgrConfigServiceClient(a.gRPCConn),
 	}
 
 	// register agent
@@ -203,18 +210,21 @@ func (a *Agent) connect() error {
 
 // register registers the agent with NDK.
 func (a *Agent) register() error {
-	r, err := a.stubs.sdkMgrService.AgentRegister(a.ctx, &ndk.AgentRegistrationRequest{})
-	if err != nil || r.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	req := &ndk.AgentRegistrationRequest{
+		WaitConfigAck: a.waitConfigAck,
+	}
+	resp, err := a.stubs.sdkMgrService.AgentRegister(a.ctx, req)
+	if err != nil || resp.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {
 		a.logger.Fatal().
 			Err(err).
-			Str("status", r.GetStatus().String()).
+			Str("status", resp.GetStatus().String()).
 			Msg("Agent registration failed")
 
 		return fmt.Errorf("agent registration failed")
 	}
 
 	a.logger.Info().
-		Uint32("app-id", r.GetAppId()).
+		Uint32("app-id", resp.GetAppId()).
 		Str("name", a.Name).
 		Msg("Application registered successfully!")
 

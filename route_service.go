@@ -89,7 +89,7 @@ func WithPreference(p uint32) RouteOption {
 	}
 }
 
-// RouteAdd adds agent IP route(s) in SRLinux.
+// RouteAdd adds agent IP route(s) in SR Linux.
 // This method takes route(s) of type RouteInfo,
 // which is defined in the NDK Go Bindings.
 // RouteInfo struct(s) can be populated by method NewRoute
@@ -151,7 +151,7 @@ func (a *Agent) RouteUpdate(routes ...*ndk.RouteInfo) error {
 	return nil
 }
 
-// RouteDelete deletes agent IP route(s) in SRLinux.
+// RouteDelete deletes agent IP route(s) in SR Linux.
 // The method takes single or multiple IPv4/IPv6 prefixes
 // under a network instance name (e.g. default).
 // prefixes is a string in the format of  "ip/preflen"
@@ -199,7 +199,7 @@ func (a *Agent) RouteDelete(networkInstance string, prefixes ...string) error {
 	return nil
 }
 
-// routeSyncStart starts syncing agent IP routes in SRLinux.
+// routeSyncStart starts syncing agent IP routes in SR Linux.
 func (a *Agent) routeSyncStart() error {
 	resp, err := a.stubs.routeService.SyncStart(a.ctx, &ndk.SyncRequest{})
 	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
@@ -212,7 +212,7 @@ func (a *Agent) routeSyncStart() error {
 	return nil
 }
 
-// routeSyncEnd ends syncing agent IP routes in SRLinux.
+// routeSyncEnd ends syncing agent IP routes in SR Linux.
 func (a *Agent) routeSyncEnd() error {
 	resp, err := a.stubs.routeService.SyncEnd(a.ctx, &ndk.SyncRequest{})
 	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {

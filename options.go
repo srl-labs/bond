@@ -8,6 +8,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// An error is returned if Agent tries to enable
+// WithConfigAcknowledge option without streaming configs.
+var ErrAckCfgAndNotStreamCfg = errors.New("agent cannot acknowledge configs unless it enables config stream")
+
 type Option func(*Agent) error
 
 // WithLogger sets the logger for the Agent.
@@ -73,4 +77,27 @@ func WithKeepAlive(interval time.Duration, threshold int) Option {
 		}
 		return nil
 	}
+}
+
+// WithConfigAcknowledge enables SR Linux to wait for explicit
+// acknowledgement from app after delivering configuration.
+// After config notifications are streamed in, app will need
+// acknowledge config with `AcknowledgeConfig` method.
+// By default, SR Linux will not wait for acknowledgement from app
+// and will commit complete immediately.
+func WithConfigAcknowledge() Option {
+	return func(a *Agent) error {
+		a.configAck = true
+		return nil
+	}
+}
+
+// validateOptions validates the Agent's final configuration.
+// A slice of errors is returned.
+func (a *Agent) validateOptions() []error {
+	var errs []error
+	if a.configAck && !a.streamConfig {
+		errs = append(errs, ErrAckCfgAndNotStreamCfg)
+	}
+	return errs
 }

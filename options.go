@@ -9,7 +9,7 @@ import (
 )
 
 // An error is returned if Agent tries to enable
-// WaitConfigAck option without streaming configs.
+// WithConfigAcknowledge option without streaming configs.
 var ErrAckCfgAndNotStreamCfg = errors.New("agent cannot acknowledge configs unless it enables config stream")
 
 type Option func(*Agent) error
@@ -79,24 +79,24 @@ func WithKeepAlive(interval time.Duration, threshold int) Option {
 	}
 }
 
-// WithWaitConfigAck enables SRLinux to wait for explicit
+// WithConfigAcknowledge enables SR Linux to wait for explicit
 // acknowledgement from app after delivering configuration.
 // After config notifications are streamed in, app will need
 // acknowledge config with `AcknowledgeConfig` method.
-// By default, SRLinux will not wait for acknowledgement from app
+// By default, SR Linux will not wait for acknowledgement from app
 // and will commit complete immediately.
-func WithWaitConfigAck() Option {
+func WithConfigAcknowledge() Option {
 	return func(a *Agent) error {
-		a.waitConfigAck = true
+		a.configAck = true
 		return nil
 	}
 }
 
-// validateOptions validates the agent's final configuration.
+// validateOptions validates the Agent's final configuration.
 // A slice of errors is returned.
 func (a *Agent) validateOptions() []error {
 	var errs []error
-	if a.waitConfigAck && !a.streamConfig {
+	if a.configAck && !a.streamConfig {
 		errs = append(errs, ErrAckCfgAndNotStreamCfg)
 	}
 	return errs

@@ -49,9 +49,9 @@ type Agent struct {
 	// instead of retrieving full app config
 	streamConfig bool
 
-	// SRLinux will wait for explicit acknowledgement
+	// SR Linux will wait for explicit acknowledgement
 	// from app after delivering configuration.
-	waitConfigAck bool
+	configAck bool
 
 	// NDK Service client stubs
 	stubs *stubs
@@ -211,7 +211,7 @@ func (a *Agent) connect() error {
 // register registers the agent with NDK.
 func (a *Agent) register() error {
 	req := &ndk.AgentRegistrationRequest{
-		WaitConfigAck: a.waitConfigAck,
+		WaitConfigAck: a.configAck,
 	}
 	resp, err := a.stubs.sdkMgrService.AgentRegister(a.ctx, req)
 	if err != nil || resp.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {

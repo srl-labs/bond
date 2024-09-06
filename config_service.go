@@ -15,7 +15,7 @@ var (
 type Acknowledgement = ndk.AcknowledgeConfigRequestInfo
 type Message func(n *Acknowledgement)
 
-// NewAck creates a config Acknowledgement.
+// NewAcknowledgement creates a config Acknowledgement.
 // - An acknowledgement contains a path
 // in XPath format which targets an app's
 // config YANG schema node.
@@ -31,13 +31,13 @@ type Message func(n *Acknowledgement)
 // individually with it's <entry> name,
 // instead of using the wildcard '*' character.
 // - An Acknowledgement message m can also be passed in.
-// After a config is acked back to SRLinux, the message
+// After a config is acked back to SR Linux, the message
 // m will be reflected in the CLI during commit phase.
 // A message type can either be an output, warning, or error
 // which can be created using the functions (Output, Error, Warning).
 // If either path or message is not provided,
 // an acknowledgement with empty contents will be returned.
-func NewAck(path string, m Message) *Acknowledgement {
+func NewAcknowledgement(path string, m Message) *Acknowledgement {
 	a := new(ndk.AcknowledgeConfigRequestInfo)
 	if path == "" || m == nil {
 		return a
@@ -68,13 +68,13 @@ func Error(e string) Message {
 	}
 }
 
-// AcknowledgeConfig explicitly acknowledges configs with SRLinux.
-// - If Agent has WaitConfigAck option set, SRLinux
+// AcknowledgeConfig explicitly acknowledges configs with SR Linux.
+// - If Agent has WithConfigAcknowledge option set, SR Linux
 // will wait for explicit ack from app before commit
 // completing the configuration.
 // Note: an error is returned if app does not have
 // both streaming of configs (WithStreamConfig)
-// and WithWaitConfigAck options enabled.
+// and WithConfigAcknowledge options enabled.
 // - This method should only be called once
 // for all configs in a commit (.commit.end).
 // If app calls AcknowledgeConfig multiple times for a commit,
@@ -82,21 +82,21 @@ func Error(e string) Message {
 // - `acks` can contain one or multiple Acknowledgement,
 // each targeting an app YANG config node
 // with a corresponding message.
-// During commit phase, SRLinux will reflect in
+// During commit phase, SR Linux will reflect in
 // the CLI all ack messages and their corresponding paths.
 // If a particular ack contains an Error message,
 // the entire commit is rejected during commit phase.
-// SRLinux will then rollback the commit to the
+// SR Linux will then rollback the commit to the
 // app's previous valid running configuration.
 // During rollback, NDK server will then stream to app
 // the valid config notifications.
-// If `acks` is empty, SRLinux will still treat this as
+// If `acks` is empty, SR Linux will still treat this as
 // a valid acknowledgement, but with empty data.
 func (a *Agent) AcknowledgeConfig(acks ...*Acknowledgement) error {
-	if !a.waitConfigAck {
+	if !a.configAck {
 		a.logger.Error().
 			Msgf(`Agent cannot AcknowledgeConfig if 
-				WithWaitConfigAck option is not enabled.`)
+				WithConfigAcknowledge option is not enabled.`)
 		return fmt.Errorf("%w", ErrAckCfgOptionNotSet)
 	}
 	if !a.streamConfig {

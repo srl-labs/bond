@@ -53,6 +53,13 @@ type Agent struct {
 	// from app after delivering configuration.
 	configAck bool
 
+	// SR Linux will automatically push config data
+	// as telemetry state.
+	autoCfgState bool
+
+	// SR Linux will cache streamed notifications.
+	cacheNotifications bool
+
 	// NDK Service client stubs
 	stubs *stubs
 
@@ -211,7 +218,9 @@ func (a *Agent) connect() error {
 // register registers the agent with NDK.
 func (a *Agent) register() error {
 	req := &ndk.AgentRegistrationRequest{
-		WaitConfigAck: a.configAck,
+		WaitConfigAck:      a.configAck,
+		AutoTelemetryState: a.autoCfgState,
+		EnableCache:        a.cacheNotifications,
 	}
 	resp, err := a.stubs.sdkMgrService.AgentRegister(a.ctx, req)
 	if err != nil || resp.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {

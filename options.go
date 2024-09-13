@@ -45,8 +45,6 @@ func WithContext(ctx context.Context, cancel context.CancelFunc) Option {
 func WithAppRootPath(path string) Option {
 	return func(a *Agent) error {
 		a.appRootPath = path
-		// also add the app's root path to combined list of app's paths
-		a.paths[path] = struct{}{}
 		return nil
 	}
 }

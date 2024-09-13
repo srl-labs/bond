@@ -115,6 +115,13 @@ func (a *Agent) handleConfigNotifications(
 		// 	a.handleConfigtopusConfig(cfgNotif)
 		// }
 
+		// add path create/update by auto config state
+		if a.autoCfgState && cfgNotif.Key.JsPath != commitEndKeyPath {
+			if cfgNotif.GetOp() != ndk.SdkMgrOperation_Delete {
+				a.paths[convertJSPathToXPath(cfgNotif.Key.GetJsPathWithKeys())] = struct{}{}
+			}
+		}
+
 		// commit.end notification is received and it is not a zero commit sequence
 		// this means that the full config is received and we can process it
 		if !a.streamConfig {
@@ -130,6 +137,7 @@ func (a *Agent) handleConfigNotifications(
 		} else { // stream configs individually
 			a.Notifications.Config <- parseConfig(cfgNotif)
 		}
+
 	}
 }
 
@@ -178,7 +186,7 @@ func parseConfig(n *ndk.ConfigNotification) *ConfigNotification {
 	cfg.Keys = n.GetKey().GetKeys()
 	cfg.Path = n.GetKey().GetJsPathWithKeys()
 	cfg.PathWithoutKeys = n.GetKey().GetJsPath()
-	if cfg.Path == ".commit.end" { // don't convert commit end path
+	if cfg.Path == commitEndKeyPath { // don't convert commit end path
 		return cfg
 	}
 	cfg.Path = convertJSPathToXPath(cfg.Path)

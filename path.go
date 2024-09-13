@@ -17,7 +17,6 @@ func convertXPathToJSPath(xp string) string {
 	}
 
 	p := replaceAllIgnoreKeys(xp, "/", ".")
-	p = replaceAllIgnoreKeys(p, "-", "_")
 
 	// Replace [name=key] with {.name=="key"}; List nodes
 	var sb strings.Builder

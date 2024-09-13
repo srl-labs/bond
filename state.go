@@ -11,35 +11,23 @@ import (
 var ErrStateDeleteFailed = errors.New("state delete failed")
 var ErrStateAddOrUpdateFailed = errors.New("state add/update failed")
 
-// DeleteAllState completely deletes the state of an application.
-// All state added with UpdateState will be deleted.
-func (a *Agent) DeleteAllState() error {
-	for path := range a.paths {
-		err := a.DeleteState(path)
-		if err != nil {
-			return err
-		}
-	}
-	a.paths = make(map[string]struct{}) // reinitialize cache
-	return nil
-}
-
 // DeleteState deletes application's state for a YANG list entry or the root container.
-// It takes in a path which follows XPath format.
-// Examples include /greeter, the app's root container or
-// /greeter/list-node[name=entry1], a list entry of `list-node`.
-// If no path is provided, the app's root container is assumed by default.
+// It takes in a target path which follows XPath format.
+// Possible YANG path targets are the app's root container (e.g. /greeter) or
+// a YANG list entry (e.g. /greeter/list-node[name=entry1]).
+// All state for child schema nodes will be deleted.
+// If empty path is provided, the app's root container is assumed by default
+// and the entire application state is deleted.
 func (a *Agent) DeleteState(path string) error {
-	var jsPath string
-
 	a.logger.Info().
 		Str("path", path).
 		Msg("Deleting state")
 
-	if path == "" {
-		jsPath = strings.ReplaceAll(a.appRootPath, "/", ".")
-	} else {
-		jsPath = convertXPathToJSPath(path)
+	// delete all app state
+	var deleteAll bool // optimize by avoiding strings.HasPrefix
+	if path == "" || path == a.appRootPath {
+		path = a.appRootPath
+		deleteAll = true
 	}
 
 	// verify state for path was added previously
@@ -50,16 +38,28 @@ func (a *Agent) DeleteState(path string) error {
 		return fmt.Errorf("%w: path: %s", ErrStateDeleteFailed, path)
 	}
 
-	key := &ndk.TelemetryKey{JsPath: jsPath}
+	deleteOk := true // indicates whether to delete path
+	for p := range a.paths {
+		if !deleteAll {
+			deleteOk = strings.HasPrefix(p, path) // delete child?
+		}
+		if !deleteOk {
+			continue
+		}
 
-	r, err := a.stubs.telemetryService.TelemetryDelete(a.ctx, &ndk.TelemetryDeleteRequest{
-		Key: []*ndk.TelemetryKey{key},
-	})
-	if err != nil || r.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
-		a.logger.Error().Msgf("Failed to delete state, response: %v", r)
-		return fmt.Errorf("%w: path: %s", ErrStateDeleteFailed, jsPath)
+		jsPath := convertXPathToJSPath(p)
+		key := &ndk.TelemetryKey{JsPath: jsPath}
+
+		r, err := a.stubs.telemetryService.TelemetryDelete(a.ctx, &ndk.TelemetryDeleteRequest{
+			Key: []*ndk.TelemetryKey{key},
+		})
+		if err != nil || r.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+			a.logger.Error().Msgf("Failed to delete state, response: %v", r)
+			return fmt.Errorf("%w: path: %s", ErrStateDeleteFailed, jsPath)
+		}
+		delete(a.paths, p)
+		deleteOk = true
 	}
-	delete(a.paths, path)
 	return nil
 }
 
@@ -68,7 +68,7 @@ func (a *Agent) DeleteState(path string) error {
 // Examples include /greeter, the app's root container or
 // /greeter/list-node[name=entry1], a list entry of `list-node`.
 // data is the target path's json state, which may contain leaf or leaf-list json data.
-// State for paths added with UpdateState may be deleted with DeleteState or DeleteAllState.
+// State for paths added with UpdateState may be deleted with DeleteState.
 func (a *Agent) UpdateState(path, data string) error {
 	var jsPath string
 
@@ -78,7 +78,8 @@ func (a *Agent) UpdateState(path, data string) error {
 		Msg("Updating state")
 
 	if path == "" {
-		jsPath = strings.ReplaceAll(a.appRootPath, "/", ".")
+		path = a.appRootPath
+		jsPath = strings.ReplaceAll(path, "/", ".")
 	} else {
 		jsPath = convertXPathToJSPath(path)
 	}

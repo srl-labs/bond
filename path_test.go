@@ -13,7 +13,7 @@ func TestConvertXPathToJSPath(t *testing.T) {
 		},
 		"Path with hyphens": {
 			input:    "/system-config/hostname",
-			expected: ".system_config.hostname",
+			expected: ".system-config.hostname",
 		},
 		"Path with list node": {
 			input:    "/interfaces/interface[name=eth0]",
@@ -21,7 +21,7 @@ func TestConvertXPathToJSPath(t *testing.T) {
 		},
 		"Complex path": {
 			input:    "/network-instances/network-instance[name=default]/protocols/protocol[name=BGP]/bgp",
-			expected: ".network_instances.network_instance{.name==\"default\"}.protocols.protocol{.name==\"BGP\"}.bgp",
+			expected: ".network-instances.network-instance{.name==\"default\"}.protocols.protocol{.name==\"BGP\"}.bgp",
 		},
 		"Empty input": {
 			input:    "",
@@ -53,7 +53,7 @@ func TestConvertJSPathToXPath(t *testing.T) {
 			expected: "/interfaces/interface",
 		},
 		"Path with hyphens": {
-			input:    ".system_config.hostname",
+			input:    ".system-config.hostname",
 			expected: "/system-config/hostname",
 		},
 		"Path with list node": {
@@ -61,7 +61,7 @@ func TestConvertJSPathToXPath(t *testing.T) {
 			expected: "/interfaces/interface[name=eth0]",
 		},
 		"Complex path": {
-			input:    ".network_instances.network_instance{.name==\"default\"}.protocols.protocol{.name==\"BGP\"}.bgp",
+			input:    ".network-instances.network-instance{.name==\"default\"}.protocols.protocol{.name==\"BGP\"}.bgp",
 			expected: "/network-instances/network-instance[name=default]/protocols/protocol[name=BGP]/bgp",
 		},
 		"Empty input": {

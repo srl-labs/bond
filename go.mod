@@ -2,10 +2,9 @@ module github.com/srl-labs/bond
 
 go 1.21.1
 
-toolchain go1.21.6
-
 require (
 	github.com/nokia/srlinux-ndk-go v0.4.0-rc1
+	github.com/openconfig/gnmi v0.10.0
 	github.com/openconfig/gnmic/pkg/api v0.1.5
 	github.com/rs/zerolog v1.31.0
 	google.golang.org/grpc v1.61.0
@@ -21,7 +20,6 @@ require (
 	github.com/jhump/protoreflect v1.15.3 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/openconfig/gnmi v0.10.0 // indirect
 	github.com/openconfig/grpctunnel v0.1.0 // indirect
 	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect

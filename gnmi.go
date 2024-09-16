@@ -3,12 +3,12 @@ package bond
 import (
 	"time"
 
+	"github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/openconfig/gnmic/pkg/api"
 )
 
 const (
 	grpcServerUnixSocket = "unix:///opt/srlinux/var/run/sr_grpc_server_insecure-mgmt" // grpc-server insecure-mgmt
-	jsonIETFEncoding     = "json_ietf"
 )
 
 func (a *Agent) newGNMITarget() error {
@@ -30,9 +30,27 @@ func (a *Agent) newGNMITarget() error {
 
 	a.gNMITarget = target
 
+	err = a.gNMITarget.CreateGNMIClient(a.ctx)
+	if err != nil {
+		a.logger.Fatal().Err(err).Msg("gNMI Client creation failed")
+	}
+
 	a.logger.Debug().Msg("gNMI Client created")
 
 	return err
+}
+
+// GetWithGNMI sends a gnmi.GetRequest and returns a gnmi.GetResponse and an error.
+// To create a gNMI GetRequest, please use NewGetRequest method
+// from github.openconfig/gnmic/pkg/api package.
+func (a *Agent) GetWithGNMI(req *gnmi.GetRequest) (*gnmi.GetResponse, error) {
+	resp, err := a.gNMITarget.Get(a.ctx, req)
+	if err != nil {
+		a.logger.Fatal().Err(err).Msg("failed executing GetRequest")
+	}
+
+	a.logger.Debug().Msgf("gNMI Get response: %+v", resp)
+	return resp, err
 }
 
 // getConfigWithGNMI gets the config from the gNMI server for the appRootPath
@@ -49,28 +67,20 @@ func (a *Agent) getConfigWithGNMI() {
 	// we want our FullConfig to be nil
 	a.Notifications.FullConfig = nil
 
-	err := a.gNMITarget.CreateGNMIClient(a.ctx)
-	if err != nil {
-		a.logger.Fatal().Err(err).Msg("gNMI client failed")
-	}
-	defer a.gNMITarget.Close()
-
 	// create a GetRequest
 	getReq, err := api.NewGetRequest(
 		api.Path(a.appRootPath),
-		api.Encoding(jsonIETFEncoding),
+		api.EncodingJSON_IETF(),
 		api.DataTypeCONFIG(),
 	)
 	if err != nil {
 		a.logger.Fatal().Err(err).Msg("failed to create GetRequest")
 	}
 
-	getResp, err := a.gNMITarget.Get(a.ctx, getReq)
+	getResp, err := a.GetWithGNMI(getReq)
 	if err != nil {
-		a.logger.Fatal().Err(err).Msg("failed executing GetRequest")
+		return
 	}
-
-	a.logger.Debug().Msgf("gNMI Get response: %+v", getResp)
 
 	// log the received full config if it is not empty
 	if len(getResp.GetNotification()) != 0 && len(getResp.GetNotification()[0].GetUpdate()) != 0 {

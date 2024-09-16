@@ -200,6 +200,14 @@ func (a *Agent) stop() {
 			Err(err).
 			Msg("Closing gRPC connection to NDK server failed")
 	}
+
+	// close gNMI target
+	err = a.gNMITarget.Close()
+	if err != nil {
+		a.logger.Error().
+			Err(err).
+			Msg("Closing gNMI target failed")
+	}
 }
 
 // connect attempts connecting to the NDK socket.

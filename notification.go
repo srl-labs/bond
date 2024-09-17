@@ -8,6 +8,76 @@ import (
 	"github.com/nokia/srlinux-ndk-go/ndk"
 )
 
+// Notifications contains channels for various NDK notifications.
+// By default, the entire app's configs is stored in config buffer.
+// To populate channels for other notification types (e.g. interface),
+// explicit calls to `Receive<type>Notifications` methods are required.
+type Notifications struct {
+	// FullConfigReceived chan receives the value and stores in FullConfig
+	// when the entire application's config is received by the stream client.
+	//
+	// This channel will not be used if streaming of configs
+	// is enabled with WithStreamConfig option.
+	FullConfigReceived chan struct{}
+
+	// FullConfig holds the application's config as json_ietf encoded string
+	// that is retrieved from the gNMI server once the commit is done.
+	// Applications are expected to read from this buffer to populate
+	// their Config and State struct.
+	//
+	// This buffer will not be used if streaming of configs
+	// is enabled with WithStreamConfig option.
+	FullConfig []byte
+
+	// Config chan receives streamed config notifications for each individual app path.
+	// The contents of each notification is defined by ConfigNotification type.
+	// To stream configs, application has to register
+	// Agent with option WithStreamConfig.
+	// Otherwise, individual configs will not be streamed and the entire
+	// config will be populated to the FullConfig buffer.
+	// bond does not allow application to simultaneously
+	// stream individual configs while also receiving full config.
+	//
+	// This channel will not be used if Agent does not
+	// have WithStreamConfig option set.
+	Config chan *ConfigNotification
+
+	// Interface chan receives streamed interface notifications.
+	// Method ReceiveInterfaceNotifications starts stream
+	// and populates notifications in chan Interface.
+	Interface chan *ndk.InterfaceNotification
+
+	// Route chan receives streamed route notifications.
+	// Method ReceiveRouteNotifications starts stream
+	// and populates notifications in chan Route.
+	Route chan *ndk.IpRouteNotification
+
+	// NextHopGroup chan receives streamed next hop group notifications.
+	// Method ReceiveNexthopGroupNotifications starts stream
+	// and populates notifications in chan NextHopGroup.
+	NextHopGroup chan *ndk.NextHopGroupNotification
+
+	// NwInst chan receives streamed network instance notifications.
+	// Method ReceiveNetworkInstanceNotifications starts stream
+	// and populates notifications in chan NwInst.
+	NwInst chan *ndk.NetworkInstanceNotification
+
+	// Lldp chan receives streamed LLDP neighbor notifications.
+	// Method ReceiveLLDPNotifications starts stream
+	// and populates notifications in chan Lldp.
+	Lldp chan *ndk.LldpNeighborNotification
+
+	// Bfd chan receives streamed Bfd Session notifications.
+	// Method ReceiveBfdNotifications starts stream
+	// and populates notifications in chan Bfd.
+	Bfd chan *ndk.BfdSessionNotification
+
+	// AppId chan receives streamed App identifier notifications.
+	// Method ReceiveAppIdNotifications starts stream
+	// and populates notifications in chan AppId.
+	AppId chan *ndk.AppIdentNotification
+}
+
 // createNotificationStream creates a notification stream and returns the Stream ID.
 // Stream ID is used to register notifications for other services.
 // It retries with retryTimeout until it succeeds.
@@ -16,7 +86,7 @@ func (a *Agent) createNotificationStream(ctx context.Context) uint64 {
 
 	for {
 		// get subscription and streamID
-		notificationResponse, err := a.SDKMgrServiceClient.NotificationRegister(ctx,
+		notificationResponse, err := a.stubs.sdkMgrService.NotificationRegister(ctx,
 			&ndk.NotificationRegisterRequest{
 				Op: ndk.NotificationRegisterRequest_Create,
 			})
@@ -51,21 +121,25 @@ func (a *Agent) startNotificationStream(ctx context.Context,
 	streamClient := a.getNotificationStreamClient(ctx, streamID)
 
 	for {
+		streamResp, err := streamClient.Recv()
 		select {
 		case <-ctx.Done():
+			a.logger.Printf("agent context has cancelled, exiting notification stream.")
 			return
 		default:
-			streamResp, err := streamClient.Recv()
 			if err == io.EOF {
 				a.logger.Printf("agent %s received EOF for stream %v", a.Name, subscType)
 				a.logger.Printf("agent %s retrying in %s", a.Name, a.retryTimeout)
 
+				retry.Reset(a.retryTimeout)
 				<-retry.C // retry timer
 				continue
 			}
 			if err != nil {
 				a.logger.Printf("agent %s failed to receive notification: %v", a.Name, err)
+				a.logger.Printf("agent %s retrying in %s", a.Name, a.retryTimeout)
 
+				retry.Reset(a.retryTimeout)
 				<-retry.C // retry timer
 				continue
 			}
@@ -80,7 +154,7 @@ func (a *Agent) getNotificationStreamClient(ctx context.Context, streamID uint64
 	retry := time.NewTicker(a.retryTimeout)
 
 	for {
-		streamClient, err := a.NotificationServiceClient.NotificationStream(ctx,
+		streamClient, err := a.stubs.notificationService.NotificationStream(ctx,
 			&ndk.NotificationStreamRequest{
 				StreamId: streamID,
 			})

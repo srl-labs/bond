@@ -3,10 +3,13 @@ package bond
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/nokia/srlinux-ndk-go/ndk"
-	"github.com/openconfig/gnmic/pkg/target"
+	"github.com/openconfig/gnmic/pkg/api/target"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -24,50 +27,105 @@ const (
 )
 
 type Agent struct {
-	ctx context.Context
-
+	ctx         context.Context
+	cancel      context.CancelFunc
 	Name        string
 	AppID       uint32
 	appRootPath string
+	// paths contains all paths, in XPath format,
+	// that are used to update the app's state data.
+	// Possible keys include app root path
+	// or any YANG lists.
+	// e.g. /greeter, /greeter/list-node[name=entry1]
+	paths map[string]struct{}
 
-	gRPCConn     *grpc.ClientConn
-	logger       *zerolog.Logger
-	retryTimeout time.Duration
+	gRPCConn        *grpc.ClientConn
+	logger          *zerolog.Logger
+	retryTimeout    time.Duration
+	gNMITarget      *target.Target
+	keepAliveConfig *keepAliveConfig
 
-	gNMITarget *target.Target
+	// agent will stream configs individually for each XPath
+	// instead of retrieving full app config
+	streamConfig bool
 
-	// NDK Service clients
-	SDKMgrServiceClient       ndk.SdkMgrServiceClient
-	NotificationServiceClient ndk.SdkNotificationServiceClient
-	TelemetryServiceClient    ndk.SdkMgrTelemetryServiceClient
+	// SR Linux will wait for explicit acknowledgement
+	// from app after delivering configuration.
+	configAck bool
 
-	// configReceivedCh chan receives the value when the full config
-	// is received by the stream client.
-	ConfigReceivedCh chan struct{}
-	// Config holds the application's config as json_ietf encoded string
-	// that is retrieved from the gNMI server once the commit is done.
-	// Applications are expected to read from this buffer to populate
-	// their Config and State struct.
-	Config []byte
+	// SR Linux will automatically push config data
+	// as telemetry state.
+	autoCfgState bool
+
+	// SR Linux will cache streamed notifications.
+	cacheNotifications bool
+
+	// NDK Service client stubs
+	stubs *stubs
+
+	// NDK streamed notification channels
+	Notifications *Notifications
+}
+
+// stubs contains NDK service client stubs
+// used to call service methods.
+type stubs struct {
+	sdkMgrService       ndk.SdkMgrServiceClient
+	notificationService ndk.SdkNotificationServiceClient
+	telemetryService    ndk.SdkMgrTelemetryServiceClient
+	routeService        ndk.SdkMgrRouteServiceClient
+	nextHopGroupService ndk.SdkMgrNextHopGroupServiceClient
+	configService       ndk.SdkMgrConfigServiceClient
+}
+
+// keepAliveConfig contains settings for keepalive messages.
+// app will log every interval seconds
+// until ndk mgr has failed >= threshold times.
+type keepAliveConfig struct {
+	interval  time.Duration
+	threshold int
+}
+
+// IsSet returns whether Agent is configured with keepalives.
+func (k *keepAliveConfig) IsSet() bool {
+	return k != nil && k.interval != 0 && k.threshold != 0
 }
 
 // NewAgent creates a new Agent instance.
-func NewAgent(name string, opts ...Option) (*Agent, error) {
+func NewAgent(name string, opts ...Option) (*Agent, []error) {
+	var errs []error
+
 	a := &Agent{
-		Name:             name,
-		retryTimeout:     defaultRetryTimeout,
-		ConfigReceivedCh: make(chan struct{}),
+		Name:         name,
+		retryTimeout: defaultRetryTimeout,
+		paths:        make(map[string]struct{}),
+		Notifications: &Notifications{
+			FullConfigReceived: make(chan struct{}),
+			Config:             make(chan *ConfigNotification),
+			Interface:          make(chan *ndk.InterfaceNotification),
+			Route:              make(chan *ndk.IpRouteNotification),
+			NextHopGroup:       make(chan *ndk.NextHopGroupNotification),
+			NwInst:             make(chan *ndk.NetworkInstanceNotification),
+			Lldp:               make(chan *ndk.LldpNeighborNotification),
+			Bfd:                make(chan *ndk.BfdSessionNotification),
+			AppId:              make(chan *ndk.AppIdentNotification),
+		},
 	}
 
+	// process all options and return cumulative errors
 	for _, opt := range opts {
 		if err := opt(a); err != nil {
-			return nil, err
+			errs = append(errs, err)
 		}
+	}
+	// validate final Agent configuration
+	errs = append(errs, a.validateOptions()...)
+	if len(errs) > 0 {
+		return nil, errs
 	}
 
 	a.ctx = metadata.AppendToOutgoingContext(a.ctx, agentMetadataKey, a.Name)
-
-	return a, nil
+	return a, errs
 }
 
 func (a *Agent) Start() error {
@@ -79,14 +137,27 @@ func (a *Agent) Start() error {
 
 	a.logger.Info().Msg("Connected to NDK socket")
 
-	a.SDKMgrServiceClient = ndk.NewSdkMgrServiceClient(a.gRPCConn)
-	a.NotificationServiceClient = ndk.NewSdkNotificationServiceClient(a.gRPCConn)
-	a.TelemetryServiceClient = ndk.NewSdkMgrTelemetryServiceClient(a.gRPCConn)
+	// create NDK client stubs
+	a.stubs = &stubs{
+		sdkMgrService:       ndk.NewSdkMgrServiceClient(a.gRPCConn),
+		notificationService: ndk.NewSdkNotificationServiceClient(a.gRPCConn),
+		telemetryService:    ndk.NewSdkMgrTelemetryServiceClient(a.gRPCConn),
+		routeService:        ndk.NewSdkMgrRouteServiceClient(a.gRPCConn),
+		nextHopGroupService: ndk.NewSdkMgrNextHopGroupServiceClient(a.gRPCConn),
+		configService:       ndk.NewSdkMgrConfigServiceClient(a.gRPCConn),
+	}
 
 	// register agent
 	err = a.register()
 	if err != nil {
 		return err
+	}
+
+	a.exitHandler() // exit gracefully if app stops
+
+	// enable keepalives
+	if a.keepAliveConfig.IsSet() {
+		go a.keepAlive(a.ctx, a.keepAliveConfig.interval, a.keepAliveConfig.threshold)
 	}
 
 	a.newGNMITarget()
@@ -96,17 +167,47 @@ func (a *Agent) Start() error {
 	return nil
 }
 
-func (a *Agent) Stop() error {
-	// register agent
+// exitHandle handles when the application stops and receives interrupt/SIGTERM signals.
+func (a *Agent) exitHandler() {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		<-sig // blocking until app is stopped
+		a.stop()
+	}()
+}
+
+// stop performs graceful shutdown of the application.
+// Actions performed include unregistering the agent with ndk server,
+// closing the grpc channel, and closing the program context.
+// All program goroutines will react to the context cancellation and exit.
+func (a *Agent) stop() {
+	defer a.cancel() // cancel app context
+	a.logger.Info().
+		Msg("Application has stopped and will exit gracefully.")
+	// unregister agent
 	err := a.unregister()
 	if err != nil {
-		return err
+		a.logger.Error().
+			Err(err).
+			Msg("Application has failed to unregister.")
+		return
 	}
-
 	// close gRPC connection
 	err = a.gRPCConn.Close()
+	if err != nil {
+		a.logger.Error().
+			Err(err).
+			Msg("Closing gRPC connection to NDK server failed")
+	}
 
-	return err
+	// close gNMI target
+	err = a.gNMITarget.Close()
+	if err != nil {
+		a.logger.Error().
+			Err(err).
+			Msg("Closing gNMI target failed")
+	}
 }
 
 // connect attempts connecting to the NDK socket.
@@ -124,18 +225,23 @@ func (a *Agent) connect() error {
 
 // register registers the agent with NDK.
 func (a *Agent) register() error {
-	r, err := a.SDKMgrServiceClient.AgentRegister(a.ctx, &ndk.AgentRegistrationRequest{})
-	if err != nil || r.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	req := &ndk.AgentRegistrationRequest{
+		WaitConfigAck:      a.configAck,
+		AutoTelemetryState: a.autoCfgState,
+		EnableCache:        a.cacheNotifications,
+	}
+	resp, err := a.stubs.sdkMgrService.AgentRegister(a.ctx, req)
+	if err != nil || resp.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {
 		a.logger.Fatal().
 			Err(err).
-			Str("status", r.GetStatus().String()).
+			Str("status", resp.GetStatus().String()).
 			Msg("Agent registration failed")
 
 		return fmt.Errorf("agent registration failed")
 	}
 
 	a.logger.Info().
-		Uint32("app-id", r.GetAppId()).
+		Uint32("app-id", resp.GetAppId()).
 		Str("name", a.Name).
 		Msg("Application registered successfully!")
 
@@ -144,7 +250,7 @@ func (a *Agent) register() error {
 
 // unregister unregisters the agent from NDK.
 func (a *Agent) unregister() error {
-	r, err := a.SDKMgrServiceClient.AgentUnRegister(a.ctx, &ndk.AgentRegistrationRequest{})
+	r, err := a.stubs.sdkMgrService.AgentUnRegister(a.ctx, &ndk.AgentRegistrationRequest{})
 	if err != nil || r.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {
 		a.logger.Fatal().
 			Err(err).
@@ -160,4 +266,50 @@ func (a *Agent) unregister() error {
 		Msg("Application unregistered successfully!")
 
 	return nil
+}
+
+// keepAlive sends periodic keepalive messages until NDK mgr has failed threshold times.
+// SR Linux will respond with a status message: kSdkMgrSuccess or kSdkMgrFailed.
+func (a *Agent) keepAlive(ctx context.Context, interval time.Duration, threshold int) {
+	errCounter := 0
+	timer := time.NewTicker(interval)
+	retry := time.NewTicker(a.retryTimeout)
+	for {
+		select {
+		case <-ctx.Done():
+			retry.Stop()
+			timer.Stop()
+			a.logger.Info().
+				Str("name", a.Name).
+				Msg("context has been cancelled, agent stopped sending keepalives.")
+			return
+		case <-timer.C: // send keepalives every interval
+			resp, err := a.stubs.sdkMgrService.KeepAlive(a.ctx, &ndk.KeepAliveRequest{})
+			if err != nil { // retry RPC if failure
+				a.logger.Info().
+					Err(err).
+					Str("status", resp.GetStatus().String()).
+					Msg("Agent failed to send keepalives.")
+				a.logger.Printf("agent %s retrying in %s", a.Name, a.retryTimeout)
+				time.Sleep(a.retryTimeout)
+				<-retry.C
+				continue
+			}
+			status := resp.GetStatus()
+			a.logger.Info().
+				Str("name", a.Name).
+				Msgf("Agent sent keepalive at %s and received response status: %s", time.Now(), status.String())
+			if status == ndk.SdkMgrStatus_kSdkMgrFailed { // sdk_mgr has failed
+				errCounter += 1
+				if errCounter >= a.keepAliveConfig.threshold {
+					a.logger.Info().
+						Str("name", a.Name).
+						Msgf("Agent keepalives have been stopped because sdk mgr has failed %d times.", threshold)
+					return
+				}
+			} else { //sdk_mgr status is success
+				errCounter = 0
+			}
+		}
+	}
 }

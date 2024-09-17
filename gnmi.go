@@ -40,9 +40,21 @@ func (a *Agent) newGNMITarget() error {
 	return err
 }
 
+// NewGetRequest creates a new *gnmi.GetRequest
+// using the provided gNMI path and a GNMIOption list opts.
+// The list of possible GNMIOption(s) can be imported
+// from gnmic api package github.com/openconfig/gnmic/pkg/api.
+// An error is returned in case one of the options is invalid
+// or if gNMI encoding type is not set (e.g. api.EncodingPROTO, api.EncodingJSON).
+func NewGetRequest(path string, opts ...api.GNMIOption) (*gnmi.GetRequest, error) {
+	// create a GetRequest
+	opts = append(opts, api.Path(path))
+	req, err := api.NewGetRequest(opts...)
+	return req, err
+}
+
 // GetWithGNMI sends a gnmi.GetRequest and returns a gnmi.GetResponse and an error.
-// To create a gNMI GetRequest, please use NewGetRequest method
-// from github.openconfig/gnmic/pkg/api package.
+// To create a gNMI GetRequest, please use NewGetRequest method.
 func (a *Agent) GetWithGNMI(req *gnmi.GetRequest) (*gnmi.GetResponse, error) {
 	resp, err := a.gNMITarget.Get(a.ctx, req)
 	if err != nil {

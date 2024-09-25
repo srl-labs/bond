@@ -23,6 +23,7 @@ type Option func(*Agent) error
 func WithLogger(logger *zerolog.Logger) Option {
 	return func(a *Agent) error {
 		a.logger = logger
+
 		return nil
 	}
 }
@@ -35,8 +36,10 @@ func WithContext(ctx context.Context, cancel context.CancelFunc) Option {
 		if ctx == nil || cancel == nil {
 			return errors.New("setting agent context failed. context cannot be nil")
 		}
+
 		a.ctx = ctx
 		a.cancel = cancel
+
 		return nil
 	}
 }

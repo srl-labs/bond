@@ -183,8 +183,10 @@ func (a *Agent) exitHandler() {
 // All program goroutines will react to the context cancellation and exit.
 func (a *Agent) stop() {
 	defer a.cancel() // cancel app context
+
 	a.logger.Info().
 		Msg("Application has stopped and will exit gracefully.")
+
 	// unregister agent
 	err := a.unregister()
 	if err != nil {
@@ -193,6 +195,7 @@ func (a *Agent) stop() {
 			Msg("Application has failed to unregister.")
 		return
 	}
+
 	// close gRPC connection
 	err = a.gRPCConn.Close()
 	if err != nil {
@@ -273,32 +276,36 @@ func (a *Agent) unregister() error {
 func (a *Agent) keepAlive(ctx context.Context, interval time.Duration, threshold int) {
 	errCounter := 0
 	timer := time.NewTicker(interval)
-	retry := time.NewTicker(a.retryTimeout)
+
 	for {
 		select {
 		case <-ctx.Done():
-			retry.Stop()
 			timer.Stop()
+
 			a.logger.Info().
 				Str("name", a.Name).
 				Msg("context has been cancelled, agent stopped sending keepalives.")
 			return
+
 		case <-timer.C: // send keepalives every interval
 			resp, err := a.stubs.sdkMgrService.KeepAlive(a.ctx, &ndk.KeepAliveRequest{})
 			if err != nil { // retry RPC if failure
 				a.logger.Info().
 					Err(err).
 					Str("status", resp.GetStatus().String()).
-					Msg("Agent failed to send keepalives.")
-				a.logger.Printf("agent %s retrying in %s", a.Name, a.retryTimeout)
+					Msgf("Agent failed to send keepalives., retrying in %s", a.retryTimeout)
+
 				time.Sleep(a.retryTimeout)
-				<-retry.C
+
 				continue
 			}
+
 			status := resp.GetStatus()
+
 			a.logger.Info().
 				Str("name", a.Name).
 				Msgf("Agent sent keepalive at %s and received response status: %s", time.Now(), status.String())
+
 			if status == ndk.SdkMgrStatus_kSdkMgrFailed { // sdk_mgr has failed
 				errCounter += 1
 				if errCounter >= a.keepAliveConfig.threshold {

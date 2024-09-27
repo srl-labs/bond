@@ -71,7 +71,7 @@ func (a *Agent) GetWithGNMI(req *gnmi.GetRequest) (*gnmi.GetResponse, error) {
 // The received config is meant to be used by the NDK app to populate its Config and State struct.
 func (a *Agent) getConfigWithGNMI() {
 	a.logger.Info().
-		Str("root-path", a.appRootPath).
+		Str("path", a.appRootPath).
 		Msg("Getting config with gNMI")
 
 	// reset the config as it might contain the previous config

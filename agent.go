@@ -246,6 +246,9 @@ func (a *Agent) register() error {
 	a.logger.Info().
 		Uint32("app-id", resp.GetAppId()).
 		Str("name", a.Name).
+		Bool("config-ack", a.configAck).
+		Bool("auto-telemetry-state", a.autoCfgState).
+		Bool("cache-notifications", a.cacheNotifications).
 		Msg("Application registered successfully!")
 
 	return nil

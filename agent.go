@@ -27,11 +27,12 @@ const (
 )
 
 type Agent struct {
-	ctx         context.Context
-	cancel      context.CancelFunc
-	Name        string
-	AppID       uint32
-	appRootPath string
+	ctx            context.Context
+	cancel         context.CancelFunc
+	Name           string
+	AppID          uint32
+	appRootPath    string
+	grpcServerName string // configured grpc-server for gNMI in SR Linux
 	// paths contains all paths, in XPath format,
 	// that are used to update the app's state data.
 	// Possible keys include app root path
@@ -42,7 +43,7 @@ type Agent struct {
 	gRPCConn        *grpc.ClientConn
 	logger          *zerolog.Logger
 	retryTimeout    time.Duration
-	gNMITarget      *target.Target
+	GnmiTarget      *target.Target
 	keepAliveConfig *keepAliveConfig
 
 	// agent will stream configs individually for each XPath
@@ -96,9 +97,10 @@ func NewAgent(name string, opts ...Option) (*Agent, []error) {
 	var errs []error
 
 	a := &Agent{
-		Name:         name,
-		retryTimeout: defaultRetryTimeout,
-		paths:        make(map[string]struct{}),
+		Name:           name,
+		retryTimeout:   defaultRetryTimeout,
+		paths:          make(map[string]struct{}),
+		grpcServerName: defaultGrpcServerName,
 		Notifications: &Notifications{
 			FullConfigReceived: make(chan struct{}),
 			Config:             make(chan *ConfigNotification),
@@ -205,7 +207,7 @@ func (a *Agent) stop() {
 	}
 
 	// close gNMI target
-	err = a.gNMITarget.Close()
+	err = a.GnmiTarget.Close()
 	if err != nil {
 		a.logger.Error().
 			Err(err).

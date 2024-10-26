@@ -52,6 +52,21 @@ func WithAppRootPath(path string) Option {
 	}
 }
 
+// WithGrpcServerName sets the name of the grpc-server instance containing
+// the unix socket that is admin-enabled in SR Linux.
+// grpc-server name `insecure-mgmt` is used by default
+// if option is not set or if provided name is empty.
+// Currently, only insecure grpc-server is supported.
+func WithGrpcServerName(name string) Option {
+	return func(a *Agent) error {
+		if name == "" {
+			return nil
+		}
+		a.grpcServerName = name
+		return nil
+	}
+}
+
 // WithStreamConfig enables streaming of application configs for each YANG path.
 // For example: the application will stream in separate configs
 // for the root container (e.g. /greeter) and any YANG

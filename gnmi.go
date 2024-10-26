@@ -1,6 +1,7 @@
 package bond
 
 import (
+	"errors"
 	"time"
 
 	"github.com/openconfig/gnmi/proto/gnmi"
@@ -8,12 +9,15 @@ import (
 )
 
 const (
-	grpcServerUnixSocket = "unix:///opt/srlinux/var/run/sr_grpc_server_insecure-mgmt" // grpc-server insecure-mgmt
+	defaultGrpcServerName      = "insecure-mgmt"                               // grpc-server insecure-mgmt
+	grpcServerUnixSocketPrefix = "unix:///opt/srlinux/var/run/sr_grpc_server_" // append with grpc-server name
 )
+
+var ErrorEmptyValue = errors.New("value to set request cannot be empty")
 
 func (a *Agent) newGNMITarget() error {
 	a.logger.Debug().Msg("creating gNMI Client")
-
+	grpcServerUnixSocket := grpcServerUnixSocketPrefix + a.grpcServerName
 	// create a target
 	target, err := api.NewTarget(
 		api.Name("ndk"),
@@ -28,9 +32,9 @@ func (a *Agent) newGNMITarget() error {
 		return err
 	}
 
-	a.gNMITarget = target
+	a.GnmiTarget = target
 
-	err = a.gNMITarget.CreateGNMIClient(a.ctx)
+	err = a.GnmiTarget.CreateGNMIClient(a.ctx)
 	if err != nil {
 		a.logger.Fatal().Err(err).Msg("gNMI Client creation failed")
 	}
@@ -53,15 +57,85 @@ func NewGetRequest(path string, opts ...api.GNMIOption) (*gnmi.GetRequest, error
 	return req, err
 }
 
+// NewSetUpdateRequest creates a new *gnmi.SetRequest
+// that updates the provided gNMI path with the provided value.
+// An update value must be provided and can be
+// created with api.Value(..).
+// A GNMIOption list opts can be as set as well.
+// The list of possible GNMIOption(s) can be imported
+// from gnmic api package github.com/openconfig/gnmic/pkg/api.
+//
+// For example: To update value at path /greeter/action-leaf-node with value "delete",
+// NewSetUpdateRequest("/greeter/action-leaf-node", api.Value("delete", "string"))
+func NewSetUpdateRequest(path string, value api.GNMIOption, opts ...api.GNMIOption) (*gnmi.SetRequest, error) {
+	if value == nil {
+		return nil, ErrorEmptyValue
+	}
+	updateReq := api.Update(api.Path(path), value)
+	// create a SetRequest
+	opts = append(opts, updateReq)
+	req, err := api.NewSetRequest(opts...)
+	return req, err
+}
+
+// NewSetReplaceRequest creates a new *gnmi.SetRequest
+// that replaces the provided gNMI path with the provided value.
+// A replace value must be provided and can be
+// created with api.Value(..).
+// A GNMIOption list opts can be as set as well.
+// The list of possible GNMIOption(s) can be imported
+// from gnmic api package github.com/openconfig/gnmic/pkg/api.
+//
+// For example: To replace value at path /greeter/action-leaf-node with value "delete",
+// NewSetReplaceRequest("/greeter/action-leaf-node", api.Value("delete", "string"))
+func NewSetReplaceRequest(path string, value api.GNMIOption, opts ...api.GNMIOption) (*gnmi.SetRequest, error) {
+	if value == nil {
+		return nil, ErrorEmptyValue
+	}
+	replaceReq := api.Replace(api.Path(path), value)
+	// create a SetRequest
+	opts = append(opts, replaceReq)
+	req, err := api.NewSetRequest(opts...)
+	return req, err
+}
+
+// NewSetDeleteRequest creates a new *gnmi.SetRequest
+// that deletes all values from the provided gNMI path.
+// A GNMIOption list opts can be as set as well.
+// The list of possible GNMIOption(s) can be imported
+// from gnmic api package github.com/openconfig/gnmic/pkg/api.
+//
+// For example: To delete values from path /greeter/action-leaf-node,
+// NewSetDeleteRequest("/greeter/action-leaf-node")
+func NewSetDeleteRequest(path string, opts ...api.GNMIOption) (*gnmi.SetRequest, error) {
+	deleteReq := api.Delete(path)
+	// create a SetRequest
+	opts = append(opts, deleteReq)
+	req, err := api.NewSetRequest(opts...)
+	return req, err
+}
+
 // GetWithGNMI sends a gnmi.GetRequest and returns a gnmi.GetResponse and an error.
 // To create a gNMI GetRequest, please use NewGetRequest method.
 func (a *Agent) GetWithGNMI(req *gnmi.GetRequest) (*gnmi.GetResponse, error) {
-	resp, err := a.gNMITarget.Get(a.ctx, req)
+	resp, err := a.GnmiTarget.Get(a.ctx, req)
 	if err != nil {
 		a.logger.Fatal().Err(err).Msg("failed executing GetRequest")
 	}
 
 	a.logger.Debug().Msgf("gNMI Get response: %+v", resp)
+	return resp, err
+}
+
+// SetWithGNMI sends a gnmi.SetRequest and returns a gnmi.SetResponse and an error.
+// To create a gNMI SetRequest, consider using NewSet<Update,Replace,Delete>Request methods.
+func (a *Agent) SetWithGNMI(req *gnmi.SetRequest) (*gnmi.SetResponse, error) {
+	resp, err := a.GnmiTarget.Set(a.ctx, req)
+	if err != nil {
+		a.logger.Fatal().Err(err).Msg("failed executing SetRequest")
+	}
+
+	a.logger.Debug().Msgf("gNMI Set response: %+v", resp)
 	return resp, err
 }
 

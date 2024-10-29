@@ -3,7 +3,7 @@ module github.com/srl-labs/bond
 go 1.21.1
 
 require (
-	github.com/nokia/srlinux-ndk-go v0.4.0-rc1
+	github.com/nokia/srlinux-ndk-go v0.4.0
 	github.com/openconfig/gnmi v0.11.0
 	github.com/openconfig/gnmic/pkg/api v0.1.8
 	github.com/rs/zerolog v1.33.0

@@ -20,8 +20,8 @@ github.com/mattn/go-isatty v0.0.16/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/
 github.com/mattn/go-isatty v0.0.19/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
-github.com/nokia/srlinux-ndk-go v0.4.0-rc1 h1:Hjps8uWMLIXheghyyEDTMu9f03pt9ImKal8CT5YLc9M=
-github.com/nokia/srlinux-ndk-go v0.4.0-rc1/go.mod h1:PHN67Ovo1q6rpt00S2TD2h9CR4qaP13zPwApUXuGl2Y=
+github.com/nokia/srlinux-ndk-go v0.4.0 h1:0ASyR1zvanIl9TUSrnMfUh0PqBEC7En/MyrSVaAd28g=
+github.com/nokia/srlinux-ndk-go v0.4.0/go.mod h1:PHN67Ovo1q6rpt00S2TD2h9CR4qaP13zPwApUXuGl2Y=
 github.com/openconfig/gnmi v0.11.0 h1:H7pLIb/o3xObu3+x0Fv9DCK7TH3FUh7mNwbYe+34hFw=
 github.com/openconfig/gnmi v0.11.0/go.mod h1:9oJSQPPCpNvfMRj8e4ZoLVAw4wL8HyxXbiDlyuexCGU=
 github.com/openconfig/gnmic/pkg/api v0.1.8 h1:3N9oFduU204Ta3g7r3dC4pcYdT/Dr7PrSC13Lyc7Ymc=

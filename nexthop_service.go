@@ -25,7 +25,7 @@ func NewNextHopGroup(options ...NextHopGroupOption) *ndk.NextHopGroupInfo {
 	n.Key = new(ndk.NextHopGroupKey)
 	n.Data = new(ndk.NextHopGroup)
 	nhops := []*ndk.NextHop{}
-	n.Data.NextHop = nhops
+	n.Data.Nexthops = nhops
 	for _, opt := range options {
 		opt(n)
 	}
@@ -77,7 +77,7 @@ func WithIpNextHop(address string, rt ndk.NextHop_ResolveToType, rType ndk.NextH
 			ResolveTo: rt,
 			Type:      rType,
 		}
-		n.Data.NextHop = append(n.Data.NextHop, nh)
+		n.Data.Nexthops = append(n.Data.Nexthops, nh)
 	}
 }
 
@@ -106,14 +106,14 @@ func WithMplsNextHop(address string, labels []uint32, rt ndk.NextHop_ResolveToTy
 		nh := &ndk.NextHop{
 			Nexthop: &ndk.NextHop_MplsNexthop{
 				MplsNexthop: &ndk.MplsNextHop{
-					IpNexthop:  nhParse,
-					LabelStack: lStack,
+					IpNexthop:   nhParse,
+					LabelStacks: lStack,
 				},
 			},
 			ResolveTo: rt,
 			Type:      rType,
 		}
-		n.Data.NextHop = append(n.Data.NextHop, nh)
+		n.Data.Nexthops = append(n.Data.Nexthops, nh)
 	}
 }
 
@@ -130,12 +130,12 @@ func (a *Agent) NextHopGroupAdd(nhgs ...*ndk.NextHopGroupInfo) error {
 	infos := []*ndk.NextHopGroupInfo{}
 	infos = append(infos, nhgs...)
 	req := &ndk.NextHopGroupRequest{
-		GroupInfo: infos,
+		GroupInfos: infos,
 	}
 	// Call NDK RPC
 	a.logger.Info().Msg("Add/update nexthop(s) group")
 	resp, err := a.stubs.nextHopGroupService.NextHopGroupAddOrUpdate(a.ctx, req)
-	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Error().
 			Msgf("Failed to add or update nexthop groups, response: %v", resp)
 		return fmt.Errorf("%w", ErrNhgAddOrUpdateFailed)
@@ -199,12 +199,12 @@ func (a *Agent) NextHopGroupDelete(networkInstance string, name string) error {
 		key,
 	}
 	req := &ndk.NextHopGroupDeleteRequest{
-		GroupKey: keys,
+		GroupKeys: keys,
 	}
 	// Call NDK RPC
 	a.logger.Info().Msg("Delete nexthop group")
 	resp, err := a.stubs.nextHopGroupService.NextHopGroupDelete(a.ctx, req)
-	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Error().
 			Msgf("Failed to delete nexthop group, response: %v", resp)
 		return fmt.Errorf("%w", ErrNhgDeleteFailed)
@@ -217,7 +217,7 @@ func (a *Agent) NextHopGroupDelete(networkInstance string, name string) error {
 // nhgSyncStart starts syncing agent nexthop groups in SRL.
 func (a *Agent) nhgSyncStart() error {
 	resp, err := a.stubs.nextHopGroupService.SyncStart(a.ctx, &ndk.SyncRequest{})
-	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Error().
 			Msgf("Failure to start syncing nexthop groups, response: %v", resp)
 		return fmt.Errorf("%w", ErrNhgSyncStart)
@@ -230,7 +230,7 @@ func (a *Agent) nhgSyncStart() error {
 // nhgSyncEnd ends syncing agent nexthop groups in SRL.
 func (a *Agent) nhgSyncEnd() error {
 	resp, err := a.stubs.nextHopGroupService.SyncEnd(a.ctx, &ndk.SyncRequest{})
-	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Error().
 			Msgf("Failure to stop syncing nexthop groups, response: %v", resp)
 		return fmt.Errorf("%w", ErrNhgSyncEnd)

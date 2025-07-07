@@ -27,7 +27,7 @@ func (a *Agent) ReceiveLLDPNotifications(ctx context.Context) {
 		a.logger.Info().
 			Msgf("Received Lldp Neighbor notifications:\n%s", b)
 
-		for _, n := range LldpStreamResp.GetNotification() {
+		for _, n := range LldpStreamResp.GetNotifications() {
 			LldpNotif := n.GetLldpNeighbor()
 			if LldpNotif == nil {
 				a.logger.Info().
@@ -62,7 +62,7 @@ func (a *Agent) addLldpSubscription(ctx context.Context, streamID uint64) {
 	// create notification register request for Lldp service
 	// using acquired stream ID
 	notificationRegisterReq := &ndk.NotificationRegisterRequest{
-		Op:       ndk.NotificationRegisterRequest_AddSubscription,
+		Op:       ndk.NotificationRegisterRequest_OPERATION_ADD_SUBSCRIPTION,
 		StreamId: streamID,
 		SubscriptionTypes: &ndk.NotificationRegisterRequest_LldpNeighbor{ // Lldp service
 			LldpNeighbor: &ndk.LldpNeighborSubscriptionRequest{},
@@ -70,7 +70,7 @@ func (a *Agent) addLldpSubscription(ctx context.Context, streamID uint64) {
 	}
 
 	registerResp, err := a.stubs.sdkMgrService.NotificationRegister(ctx, notificationRegisterReq)
-	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Printf("agent %s failed registering to notification with req=%+v: %v",
 			a.Name, notificationRegisterReq, err)
 	}

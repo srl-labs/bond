@@ -27,7 +27,7 @@ func (a *Agent) ReceiveBfdNotifications(ctx context.Context) {
 		a.logger.Info().
 			Msgf("Received Bfd Session notifications:\n%s", b)
 
-		for _, n := range BfdStreamResp.GetNotification() {
+		for _, n := range BfdStreamResp.GetNotifications() {
 			BfdNotif := n.GetBfdSession()
 			if BfdNotif == nil {
 				a.logger.Info().
@@ -63,7 +63,7 @@ func (a *Agent) addBfdSubscription(ctx context.Context, streamID uint64) {
 	// create notification register request for Bfd service
 	// using acquired stream ID
 	notificationRegisterReq := &ndk.NotificationRegisterRequest{
-		Op:       ndk.NotificationRegisterRequest_AddSubscription,
+		Op:       ndk.NotificationRegisterRequest_OPERATION_ADD_SUBSCRIPTION,
 		StreamId: streamID,
 		SubscriptionTypes: &ndk.NotificationRegisterRequest_BfdSession{ // Bfd service
 			BfdSession: &ndk.BfdSessionSubscriptionRequest{},
@@ -71,7 +71,7 @@ func (a *Agent) addBfdSubscription(ctx context.Context, streamID uint64) {
 	}
 
 	registerResp, err := a.stubs.sdkMgrService.NotificationRegister(ctx, notificationRegisterReq)
-	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Printf("agent %s failed registering to notification with req=%+v: %v",
 			a.Name, notificationRegisterReq, err)
 	}

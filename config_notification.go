@@ -78,7 +78,7 @@ func (a *Agent) addConfigSubscription(ctx context.Context, streamID uint64) {
 	// create notification register request for Config service
 	// using acquired stream ID
 	notificationRegisterReq := &ndk.NotificationRegisterRequest{
-		Op:       ndk.NotificationRegisterRequest_AddSubscription,
+		Op:       ndk.NotificationRegisterRequest_OPERATION_ADD_SUBSCRIPTION,
 		StreamId: streamID,
 		SubscriptionTypes: &ndk.NotificationRegisterRequest_Config{ // config service
 			Config: &ndk.ConfigSubscriptionRequest{},
@@ -86,7 +86,7 @@ func (a *Agent) addConfigSubscription(ctx context.Context, streamID uint64) {
 	}
 
 	registerResp, err := a.stubs.sdkMgrService.NotificationRegister(ctx, notificationRegisterReq)
-	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Printf("agent %s failed registering to notification with req=%+v: %v",
 			a.Name, notificationRegisterReq, err)
 	}
@@ -98,7 +98,7 @@ func (a *Agent) addConfigSubscription(ctx context.Context, streamID uint64) {
 func (a *Agent) handleConfigNotifications(
 	notifStreamResp *ndk.NotificationStreamResponse,
 ) {
-	notifs := notifStreamResp.GetNotification()
+	notifs := notifStreamResp.GetNotifications()
 
 	for _, n := range notifs {
 		cfgNotif := n.GetConfig()
@@ -117,7 +117,7 @@ func (a *Agent) handleConfigNotifications(
 
 		// add path create/update by auto config state
 		if a.autoCfgState && cfgNotif.Key.JsPath != commitEndKeyPath {
-			if cfgNotif.GetOp() != ndk.SdkMgrOperation_Delete {
+			if cfgNotif.GetOp() != ndk.SdkMgrOperation_SDK_MGR_OPERATION_DELETE {
 				a.paths[convertJSPathToXPath(cfgNotif.Key.GetJsPathWithKeys())] = struct{}{}
 			}
 		}

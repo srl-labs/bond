@@ -86,9 +86,9 @@ func (a *Agent) createNotificationStream(ctx context.Context) uint64 {
 		// get subscription and streamID
 		notificationResponse, err := a.stubs.sdkMgrService.NotificationRegister(ctx,
 			&ndk.NotificationRegisterRequest{
-				Op: ndk.NotificationRegisterRequest_Create,
+				Op: ndk.NotificationRegisterRequest_OPERATION_CREATE,
 			})
-		if err != nil || notificationResponse.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+		if err != nil || notificationResponse.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 			a.logger.Printf("agent %q could not register for notifications: %v. Status: %s",
 				a.Name, err, notificationResponse.GetStatus().String())
 			a.logger.Printf("agent %q retrying in %s", a.Name, a.retryTimeout)

@@ -19,6 +19,7 @@ import (
 const (
 	ndkSocket           = "unix:///opt/srlinux/var/run/sr_sdk_service_manager:50053"
 	defaultRetryTimeout = 5 * time.Second
+	defaultMaxRetries   = 5
 
 	defaultUsername = "admin"
 	defaultPassword = "NokiaSrl1!"
@@ -230,36 +231,46 @@ func (a *Agent) connect() error {
 
 // register registers the agent with NDK.
 func (a *Agent) register() error {
-	req := &ndk.AgentRegistrationRequest{
-		WaitConfigAck:      a.configAck,
-		AutoTelemetryState: a.autoCfgState,
-		EnableCache:        a.cacheNotifications,
-	}
-	resp, err := a.stubs.sdkMgrService.AgentRegister(a.ctx, req)
-	if err != nil || resp.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {
-		a.logger.Fatal().
+	var err error
+	var resp *ndk.AgentRegistrationResponse
+
+	for i := 1; i <= defaultMaxRetries; i++ {
+		req := &ndk.AgentRegistrationRequest{
+			WaitConfigAck:      a.configAck,
+			AutoTelemetryState: a.autoCfgState,
+			EnableCache:        a.cacheNotifications,
+		}
+		resp, err = a.stubs.sdkMgrService.AgentRegister(a.ctx, req)
+		if err == nil && resp.Status == ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
+			a.logger.Info().
+				Uint32("app-id", resp.GetAppId()).
+				Str("name", a.Name).
+				Bool("config-ack", a.configAck).
+				Bool("auto-telemetry-state", a.autoCfgState).
+				Bool("cache-notifications", a.cacheNotifications).
+				Msg("Application registered successfully!")
+
+			return nil
+		}
+
+		a.logger.Warn().
 			Err(err).
 			Str("status", resp.GetStatus().String()).
-			Msg("Agent registration failed")
+			Msgf("Agent registration failed %d out of %d times", i, defaultMaxRetries)
 
-		return fmt.Errorf("agent registration failed")
+		if i < defaultMaxRetries {
+			a.logger.Warn().
+				Msgf("Retrying agent registration in %.1f seconds", a.retryTimeout.Seconds())
+			time.Sleep(a.retryTimeout)
+		}
 	}
-
-	a.logger.Info().
-		Uint32("app-id", resp.GetAppId()).
-		Str("name", a.Name).
-		Bool("config-ack", a.configAck).
-		Bool("auto-telemetry-state", a.autoCfgState).
-		Bool("cache-notifications", a.cacheNotifications).
-		Msg("Application registered successfully!")
-
-	return nil
+	return fmt.Errorf("agent registration failed after %d retries", defaultMaxRetries)
 }
 
 // unregister unregisters the agent from NDK.
 func (a *Agent) unregister() error {
 	r, err := a.stubs.sdkMgrService.AgentUnRegister(a.ctx, &ndk.AgentRegistrationRequest{})
-	if err != nil || r.Status != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || r.Status != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Fatal().
 			Err(err).
 			Str("status", r.GetStatus().String()).
@@ -311,7 +322,7 @@ func (a *Agent) keepAlive(ctx context.Context, interval time.Duration, threshold
 				Str("name", a.Name).
 				Msgf("Agent sent keepalive at %s and received response status: %s", time.Now(), status.String())
 
-			if status == ndk.SdkMgrStatus_kSdkMgrFailed { // sdk_mgr has failed
+			if status == ndk.SdkMgrStatus_SDK_MGR_STATUS_FAILED { // sdk_mgr has failed
 				errCounter += 1
 				if errCounter >= a.keepAliveConfig.threshold {
 					a.logger.Info().

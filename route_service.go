@@ -25,8 +25,8 @@ type RouteOption func(r *ndk.RouteInfo)
 // Optional: WithPreference, WithMetric
 func NewRoute(options ...RouteOption) *ndk.RouteInfo {
 	r := new(ndk.RouteInfo)
-	r.Data = new(ndk.RoutePb)
-	r.Key = new(ndk.RouteKeyPb)
+	r.Data = new(ndk.Route)
+	r.Key = new(ndk.RouteKey)
 	r.Key.IpPrefix = new(ndk.IpAddrPrefLenPb)
 	for _, opt := range options {
 		opt(r)
@@ -39,7 +39,7 @@ func NewRoute(options ...RouteOption) *ndk.RouteInfo {
 // Example: default
 func WithNetInstName(n string) RouteOption {
 	return func(r *ndk.RouteInfo) {
-		r.Key.NetInstName = n
+		r.Key.NetworkInstanceName = n
 	}
 }
 
@@ -108,7 +108,7 @@ func (a *Agent) RouteAdd(routes ...*ndk.RouteInfo) error {
 	// call NDK RPC
 	a.logger.Info().Msg("Add/Update routes")
 	resp, err := a.stubs.routeService.RouteAddOrUpdate(a.ctx, req)
-	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Error().
 			Msgf("Failed to add/update routes, response: %v", resp)
 		return fmt.Errorf("%w", ErrRouteAddOrUpdateFailed)
@@ -164,7 +164,7 @@ func (a *Agent) RouteUpdate(routes ...*ndk.RouteInfo) error {
 // Example: RouteDelete("default", "2001:db8::1/64") deletes from FIB
 // an IPv6 address with a prefix length of 64.
 func (a *Agent) RouteDelete(networkInstance string, prefixes ...string) error {
-	keys := []*ndk.RouteKeyPb{}
+	keys := []*ndk.RouteKey{}
 	for _, prefix := range prefixes {
 		addr, preflen := parseIP(prefix)
 		if addr == nil || preflen == 0 {
@@ -176,9 +176,9 @@ func (a *Agent) RouteDelete(networkInstance string, prefixes ...string) error {
 			IpAddr:       addr,
 			PrefixLength: preflen,
 		}
-		key := &ndk.RouteKeyPb{
-			NetInstName: networkInstance,
-			IpPrefix:    prefix,
+		key := &ndk.RouteKey{
+			NetworkInstanceName: networkInstance,
+			IpPrefix:            prefix,
 		}
 		keys = append(keys, key)
 	}
@@ -189,7 +189,7 @@ func (a *Agent) RouteDelete(networkInstance string, prefixes ...string) error {
 	// call NDK RPC
 	a.logger.Info().Msg("Delete routes")
 	resp, err := a.stubs.routeService.RouteDelete(a.ctx, req)
-	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Error().
 			Msgf("Failed to delete routes, response: %v", resp)
 		return fmt.Errorf("%w", ErrRouteDeleteFailed)
@@ -202,7 +202,7 @@ func (a *Agent) RouteDelete(networkInstance string, prefixes ...string) error {
 // routeSyncStart starts syncing agent IP routes in SR Linux.
 func (a *Agent) routeSyncStart() error {
 	resp, err := a.stubs.routeService.SyncStart(a.ctx, &ndk.SyncRequest{})
-	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Error().
 			Msgf("Failure to start syncing routes, response: %v", resp)
 		return fmt.Errorf("%w", ErrRouteSyncStart)
@@ -215,7 +215,7 @@ func (a *Agent) routeSyncStart() error {
 // routeSyncEnd ends syncing agent IP routes in SR Linux.
 func (a *Agent) routeSyncEnd() error {
 	resp, err := a.stubs.routeService.SyncEnd(a.ctx, &ndk.SyncRequest{})
-	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Error().
 			Msgf("Failure to stop syncing routes, response: %v", resp)
 		return fmt.Errorf("%w", ErrRouteSyncEnd)
@@ -238,7 +238,7 @@ func parseIP(ip string) (address *ndk.IpAddressPb, preflen uint32) {
 			bytes = bytes.To4()
 		}
 		address := &ndk.IpAddressPb{
-			Addr: bytes,
+			IpAddress: bytes,
 		}
 
 		if len(ret) == 1 {

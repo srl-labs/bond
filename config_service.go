@@ -113,7 +113,7 @@ func (a *Agent) AcknowledgeConfig(acks ...*Acknowledgement) error {
 	// Call NDK RPC
 	a.logger.Info().Msgf("Acknowledge Config %v with NDK server", req)
 	resp, err := a.stubs.configService.AcknowledgeConfig(a.ctx, req)
-	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || resp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Error().
 			Msgf("Failed to acknowledge config, response: %v", resp)
 		return fmt.Errorf("%w", ErrAckCfgFailed)

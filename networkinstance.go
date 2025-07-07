@@ -27,8 +27,8 @@ func (a *Agent) ReceiveNetworkInstanceNotifications(ctx context.Context) {
 		a.logger.Info().
 			Msgf("Received network instance notifications:\n%s", b)
 
-		for _, n := range nwInstStreamResp.GetNotification() {
-			nwInstNotif := n.GetNwInst()
+		for _, n := range nwInstStreamResp.GetNotifications() {
+			nwInstNotif := n.GetNetworkInstance()
 			if nwInstNotif == nil {
 				a.logger.Info().
 					Msgf("Empty network instance notification:%+v", n)
@@ -62,15 +62,15 @@ func (a *Agent) addNwInstSubscription(ctx context.Context, streamID uint64) {
 	// create notification register request for nwinst service
 	// using acquired stream ID
 	notificationRegisterReq := &ndk.NotificationRegisterRequest{
-		Op:       ndk.NotificationRegisterRequest_AddSubscription,
+		Op:       ndk.NotificationRegisterRequest_OPERATION_ADD_SUBSCRIPTION,
 		StreamId: streamID,
-		SubscriptionTypes: &ndk.NotificationRegisterRequest_NwInst{ // nwinst service
-			NwInst: &ndk.NetworkInstanceSubscriptionRequest{},
+		SubscriptionTypes: &ndk.NotificationRegisterRequest_NetworkInstance{ // nwinst service
+			NetworkInstance: &ndk.NetworkInstanceSubscriptionRequest{},
 		},
 	}
 
 	registerResp, err := a.stubs.sdkMgrService.NotificationRegister(ctx, notificationRegisterReq)
-	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Printf("agent %s failed registering to notification with req=%+v: %v",
 			a.Name, notificationRegisterReq, err)
 	}

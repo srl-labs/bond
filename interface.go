@@ -27,8 +27,8 @@ func (a *Agent) ReceiveInterfaceNotifications(ctx context.Context) {
 		a.logger.Info().
 			Msgf("Received Interface notifications:\n%s", b)
 
-		for _, n := range intfStreamResp.GetNotification() {
-			intfNotif := n.GetIntf()
+		for _, n := range intfStreamResp.GetNotifications() {
+			intfNotif := n.GetInterface()
 			if intfNotif == nil {
 				a.logger.Info().
 					Msgf("Empty interface notification:%+v", n)
@@ -62,15 +62,15 @@ func (a *Agent) addIntfSubscription(ctx context.Context, streamID uint64) {
 	// create notification register request for Intf service
 	// using acquired stream ID
 	notificationRegisterReq := &ndk.NotificationRegisterRequest{
-		Op:       ndk.NotificationRegisterRequest_AddSubscription,
+		Op:       ndk.NotificationRegisterRequest_OPERATION_ADD_SUBSCRIPTION,
 		StreamId: streamID,
-		SubscriptionTypes: &ndk.NotificationRegisterRequest_Intf{ // intf service
-			Intf: &ndk.InterfaceSubscriptionRequest{},
+		SubscriptionTypes: &ndk.NotificationRegisterRequest_Interface{ // intf service
+			Interface: &ndk.InterfaceSubscriptionRequest{},
 		},
 	}
 
 	registerResp, err := a.stubs.sdkMgrService.NotificationRegister(ctx, notificationRegisterReq)
-	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Printf("agent %s failed registering to notification with req=%+v: %v",
 			a.Name, notificationRegisterReq, err)
 	}

@@ -27,8 +27,8 @@ func (a *Agent) ReceiveNexthopGroupNotifications(ctx context.Context) {
 		a.logger.Info().
 			Msgf("Received Nexthop group notifications:\n%s", b)
 
-		for _, n := range nhgStreamResp.GetNotification() {
-			nhgNotif := n.GetNhg()
+		for _, n := range nhgStreamResp.GetNotifications() {
+			nhgNotif := n.GetNexthopGroup()
 			if nhgNotif == nil {
 				a.logger.Info().
 					Msgf("Empty Nexthop group notification:%+v", n)
@@ -62,15 +62,15 @@ func (a *Agent) addNhgSubscription(ctx context.Context, streamID uint64) {
 	// create notification register request for nhg service
 	// using acquired stream ID
 	notificationRegisterReq := &ndk.NotificationRegisterRequest{
-		Op:       ndk.NotificationRegisterRequest_AddSubscription,
+		Op:       ndk.NotificationRegisterRequest_OPERATION_ADD_SUBSCRIPTION,
 		StreamId: streamID,
-		SubscriptionTypes: &ndk.NotificationRegisterRequest_Nhg{ // nhg service
-			Nhg: &ndk.NextHopGroupSubscriptionRequest{},
+		SubscriptionTypes: &ndk.NotificationRegisterRequest_NexthopGroup{ // nhg service
+			NexthopGroup: &ndk.NextHopGroupSubscriptionRequest{},
 		},
 	}
 
 	registerResp, err := a.stubs.sdkMgrService.NotificationRegister(ctx, notificationRegisterReq)
-	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || registerResp.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		a.logger.Printf("agent %s failed registering to notification with req=%+v: %v",
 			a.Name, notificationRegisterReq, err)
 	}

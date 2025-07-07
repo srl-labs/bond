@@ -51,9 +51,9 @@ func (a *Agent) DeleteState(path string) error {
 		key := &ndk.TelemetryKey{JsPath: jsPath}
 
 		r, err := a.stubs.telemetryService.TelemetryDelete(a.ctx, &ndk.TelemetryDeleteRequest{
-			Key: []*ndk.TelemetryKey{key},
+			Keys: []*ndk.TelemetryKey{key},
 		})
-		if err != nil || r.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+		if err != nil || r.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 			a.logger.Error().Msgf("Failed to delete state, response: %v", r)
 			return fmt.Errorf("%w: path: %s", ErrStateDeleteFailed, jsPath)
 		}
@@ -88,13 +88,13 @@ func (a *Agent) UpdateState(path, data string) error {
 	tdata := &ndk.TelemetryData{JsonContent: data}
 	info := &ndk.TelemetryInfo{Key: tkey, Data: tdata}
 	req := &ndk.TelemetryUpdateRequest{
-		State: []*ndk.TelemetryInfo{info},
+		States: []*ndk.TelemetryInfo{info},
 	}
 
 	a.logger.Info().Msgf("Telemetry Request: %+v", req)
 
 	r, err := a.stubs.telemetryService.TelemetryAddOrUpdate(a.ctx, req)
-	if err != nil || r.GetStatus() != ndk.SdkMgrStatus_kSdkMgrSuccess {
+	if err != nil || r.GetStatus() != ndk.SdkMgrStatus_SDK_MGR_STATUS_SUCCESS {
 		return fmt.Errorf("%w: key: %s, data: %s", ErrStateAddOrUpdateFailed, jsPath, data)
 	}
 	a.paths[path] = struct{}{} // add path to cache
